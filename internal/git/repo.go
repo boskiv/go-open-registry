@@ -32,7 +32,7 @@ func HeadRepo(repo *git.Repository) {
 	_, err := repo.Head()
 	helpers.CheckIfError(err)
 	helpers.Info("Done")
-	CommitRepo("hello world")
+	//CommitRepo("hello world")
 }
 
 func CommitRepo(content string) {
