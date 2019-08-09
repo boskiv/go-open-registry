@@ -1,6 +1,9 @@
 # Go Open Registry
 
 [![Build Status](https://travis-ci.org/boskiv/go-open-registry.svg?branch=master)](https://travis-ci.org/boskiv/go-open-registry)
+[![Maintainability](https://api.codeclimate.com/v1/badges/cd4770aade4ad722f9ca/maintainability)](https://codeclimate.com/github/boskiv/go-open-registry/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/cd4770aade4ad722f9ca/test_coverage)](https://codeclimate.com/github/boskiv/go-open-registry/test_coverage)
+
 
 Crates.io cargo registry Golang implementation using amazing Gin web framework
 https://github.com/gin-gonic/gin 
