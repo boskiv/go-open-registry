@@ -8,8 +8,8 @@ env:
 
 # You don't need to test on very old versions of the Go compiler. It's the user's
 # responsibility to keep their compiler up to date.
-#go:
-#  - 1.12.x
+go:
+  - 1.12.x
 
 # Only clone the most recent commit.
 git:
@@ -17,7 +17,7 @@ git:
 
 # Skip the install step. Don't `go get` dependencies. Only build with the code
 # in vendor/
-#install: true
+install: false
 
 # Don't email me the results of the test runs.
 #notifications:
