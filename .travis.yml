@@ -16,8 +16,13 @@ git:
 
 # Skip the install step. Don't `go get` dependencies. Only build with the code
 # in vendor/
-install: true
+before_install:
+  - if [[ "${GO111MODULE}" = "on" ]]; then mkdir "${HOME}/go"; export GOPATH="${HOME}/go"; fi
 
+install:
+  - if [[ "${GO111MODULE}" = "on" ]]; then go mod download; else make install; fi
+  - if [[ "${GO111MODULE}" = "on" ]]; then export PATH="${GOPATH}/bin:${GOROOT}/bin:${PATH}"; fi
+  
 # Don't email me the results of the test runs.
 #notifications:
 #  email: false
