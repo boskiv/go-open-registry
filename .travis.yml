@@ -1,7 +1,7 @@
 language: go
 
 env:
-  - GO111MODULE=on GOFLAGS='-mod vendor'
+  - GO111MODULE=on
 
 git:
   depth: 1
