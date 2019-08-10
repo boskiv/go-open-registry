@@ -1,81 +1,75 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
-	"github.com/toorop/gin-logrus"
 	"go-open-registry/internal/config"
-	"go-open-registry/internal/git"
-	"go-open-registry/internal/helpers"
-	"go-open-registry/internal/parser"
+	"go-open-registry/internal/gitregistry"
+	"go-open-registry/internal/handlers"
+	"go-open-registry/internal/storage"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus" //nolint:depguard
+	ginlogrus "github.com/toorop/gin-logrus"
 )
 
-var appConfig *config.AppConfig
-
-type CrateDependency struct {
-	Name            string   `json:"name"`
-	Req             string   `json:"req"`
-	Features        []string `json:"features"`
-	Optional        bool     `json:"optional"`
-	DefaultFeatures bool     `json:"default_features"`
-	Target          string   `json:"target"`
-	Kind            string   `json:"kind"`
-	Registry        string   `json:"registry"`
-	Package         string   `json:"package"`
-}
-
-type CrateJson struct {
-	Name     string            `json:"name"`
-	Vers     string            `json:"vers"`
-	Deps     []CrateDependency `json:"deps"`
-	Cksum    string            `json:"cksum"`
-	Features interface{}       `json:"features"`
-	Yanked   bool              `json:"yanked"`
-	Links    string            `json:"links"`
-}
-
-func NewCrateHandler(c *gin.Context) {
-	// Read the Body content
-	if c.Request.Body != nil && c.Request.ContentLength > 0 {
-		jsonFile, crateFile, err := parser.ReadBinary(c.Request.Body)
-		helpers.CheckIfError(err)
-		fmt.Printf("%s", jsonFile)
-		var crateJson CrateJson
-		err = json.Unmarshal(jsonFile, &crateJson)
-		helpers.CheckIfError(err)
-		_, _ = appConfig.Storage.PutFile(crateJson.Name, jsonFile)
-		_, _ = appConfig.Storage.PutFile(crateJson.Name+"-"+crateJson.Vers+".crate", crateFile)
-	}
-
-	resp := map[string][]string{
-		// Array of strings of categories that are invalid and ignored.
-		"invalid_categories": {},
-		// Array of strings of badge names that are invalid and ignored.
-		"invalid_badges": {},
-		// Array of strings of arbitrary warnings to display to the user.
-		"other": {},
-	}
-	c.JSON(200, gin.H{
-		// Optional object of warnings to display to the user.
-		"warnings": resp,
-	})
-}
-
 func main() {
-	appConfig = config.InitConfig()
-
+	appConfig := config.New()
+	appRepo := gitregistry.New(appConfig.Repo.URL)
+	appConfig.Repo.Instance = appRepo
+	appStorage := storage.New(appConfig.Storage.Type)
+	appConfig.Storage.Instance = appStorage
 	log := logrus.New()
 
-	repo, err := git.InitRepo()
-	helpers.CheckIfError(err)
-	git.HeadRepo(repo)
+	if gin.Mode() != gin.ReleaseMode {
+		logrus.Info("Config: ")
+		jsonOutput, err := json.MarshalIndent(appConfig, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(jsonOutput))
+	}
 
-	r := gin.New()
+	engine := gin.New()
 
-	r.Use(ginlogrus.Logger(log), gin.Recovery())
+	engine.Use(ginlogrus.Logger(log), gin.Recovery())
 
-	r.PUT("/api/v1/crates/new", NewCrateHandler)
-	_ = r.Run()
+	engine.PUT("/api/v1/crates/new", handlers.NewCrateHandler(appConfig))
+
+	logrus.WithField("port", appConfig.App.Port).Info("Staring server on port")
+	srv := &http.Server{
+		Addr:    fmt.Sprintf(":%d", appConfig.App.Port),
+		Handler: engine,
+	}
+
+	go func() {
+		// service connections
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logrus.WithField("error", err).Fatal("listen: ")
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server with
+	// a timeout of 5 seconds.
+	quit := make(chan os.Signal, 1)
+	// kill (no param) default send syscall.SIGTERM
+	// kill -2 is syscall.SIGINT
+	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	logrus.Info("Shutdown Server ...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		logrus.WithField("error", err).Fatal("Server Shutdown: ", err)
+	}
+
+	logrus.Info("Server exiting")
 }
