@@ -64,10 +64,10 @@ func New() *AppConfig {
 	viper.SetDefault("git_repo_password", "")
 	appConfig.Repo.Bot.Password = viper.GetString("git_repo_password")
 
-	viper.SetDefault("git_repo_path", "./tmp")
+	viper.SetDefault("git_repo_path", "tmpGit")
 	appConfig.Repo.Path = viper.GetString("git_repo_path")
 
-	viper.SetDefault("storage_path", "./upload")
+	viper.SetDefault("storage_path", "upload")
 	appConfig.Storage.Path = viper.GetString("storage_path")
 
 	viper.SetDefault("storage_type", "local")
