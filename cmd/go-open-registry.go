@@ -24,7 +24,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func InitDB(appConfig *config.AppConfig) {
+func initDB(appConfig *config.AppConfig) {
 	ctx, cancel := context.WithTimeout(context.Background(), appConfig.DB.Timeout*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(appConfig.DB.URI))
 	helpers.FatalIfError(err)
@@ -59,7 +59,7 @@ func main() {
 	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
 	appConfig.Storage.Instance = appStorage
 
-	InitDB(appConfig)
+	initDB(appConfig)
 
 	logger := logrus.New()
 

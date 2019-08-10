@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -23,6 +25,13 @@ func FatalIfError(err error) {
 		return
 	}
 	logrus.Fatal(err)
+}
+
+// CheckSum SHA256 of []byte return as string
+func CheckSum(content []byte) string {
+	h := sha256.New()
+	h.Write(content)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // Info should be used to describe the example commands that are about to run.

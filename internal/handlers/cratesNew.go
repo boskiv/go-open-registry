@@ -2,8 +2,6 @@ package handlers
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -24,9 +22,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 		// Read the Body content
 		if c.Request.Body != nil && c.Request.ContentLength > 0 {
 			jsonFile, crateFile, err := parser.ReadBinary(c.Request.Body)
-			h := sha256.New()
-			h.Write(crateFile)
-			cksum := hex.EncodeToString(h.Sum(nil))
+			cksum := helpers.CheckSum(crateFile)
 			helpers.FatalIfError(err)
 			logrus.Debug(jsonFile)
 			var crateJSON parser.CrateJSON
@@ -39,7 +35,8 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			// Validate version
 			collection := appConfig.DB.Client.Database("crates").Collection("packages")
-			ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
 			res, err := collection.InsertOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
 			if err != nil {
 				logrus.WithField("error", err).Error("Error 400")
@@ -54,11 +51,12 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				logrus.WithField("id", id).Info("Package version added to mongo")
 			}
 
-			commitError, done := RegistryCommit(appConfig, crateJSON, jsonFileWithCksum, collection, ctx, c)
+			// Todo: Refactor it smart
+			commitError, done := registryCommit(ctx, appConfig, crateJSON, jsonFileWithCksum, collection, c)
 			if done {
 				return
 			}
-			if StoragePut(appConfig, crateJSON, crateFile, commitError, collection, ctx, c) {
+			if storagePut(ctx, appConfig, crateJSON, crateFile, collection, c, commitError) {
 				return
 			}
 		}
@@ -77,7 +75,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 	}
 }
 
-func StoragePut(appConfig *config.AppConfig, crateJSON parser.CrateJSON, crateFile []byte, commitError error, collection *mongo.Collection, ctx context.Context, c *gin.Context) bool {
+func storagePut(ctx context.Context, appConfig *config.AppConfig, crateJSON parser.CrateJSON, crateFile []byte, collection *mongo.Collection, c *gin.Context, commitError error) bool {
 	storageError := appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
 	if storageError != nil {
 		logrus.WithField("commitError", commitError).Info("Error while commit to git")
@@ -97,7 +95,7 @@ func StoragePut(appConfig *config.AppConfig, crateJSON parser.CrateJSON, crateFi
 	return false
 }
 
-func RegistryCommit(appConfig *config.AppConfig, crateJSON parser.CrateJSON, jsonFileWithCksum []byte, collection *mongo.Collection, ctx context.Context, c *gin.Context) (error, bool) {
+func registryCommit(ctx context.Context, appConfig *config.AppConfig, crateJSON parser.CrateJSON, jsonFileWithCksum []byte, collection *mongo.Collection, c *gin.Context) (bool, error) {
 	commitError := gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers, jsonFileWithCksum)
 	if commitError != nil {
 		logrus.WithField("commitError", commitError).Info("Error while commit to git")
@@ -106,7 +104,7 @@ func RegistryCommit(appConfig *config.AppConfig, crateJSON parser.CrateJSON, jso
 			c.JSON(400, gin.H{
 				"error": err,
 			})
-			return nil, true
+			return true, nil
 		}
 		if res != nil {
 			count := res.DeletedCount
@@ -114,5 +112,5 @@ func RegistryCommit(appConfig *config.AppConfig, crateJSON parser.CrateJSON, jso
 		}
 
 	}
-	return commitError, false
+	return false, commitError
 }
