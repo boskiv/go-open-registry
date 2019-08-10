@@ -52,7 +52,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 			}
 
 			// Todo: Refactor it smart
-			commitError, done := registryCommit(ctx, appConfig, crateJSON, jsonFileWithCksum, collection, c)
+			done, commitError := registryCommit(ctx, appConfig, crateJSON, jsonFileWithCksum, collection, c)
 			if done {
 				return
 			}
