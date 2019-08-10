@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
@@ -26,6 +27,15 @@ func main() {
 	appConfig.Storage.Instance = appStorage
 	log := logrus.New()
 
+	if gin.Mode() != gin.ReleaseMode {
+		logrus.Info("Config: ")
+		jsonOutput, err := json.MarshalIndent(appConfig, "", "  ")
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(jsonOutput))
+	}
+
 	engine := gin.New()
 
 	engine.Use(ginlogrus.Logger(log), gin.Recovery())
@@ -48,18 +58,18 @@ func main() {
 	// Wait for interrupt signal to gracefully shutdown the server with
 	// a timeout of 5 seconds.
 	quit := make(chan os.Signal, 1)
-	// kill (no param) default send syscanll.SIGTERM
+	// kill (no param) default send syscall.SIGTERM
 	// kill -2 is syscall.SIGINT
 	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutdown Server ...")
+	logrus.Info("Shutdown Server ...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown: ", err)
+		logrus.WithField("error", err).Fatal("Server Shutdown: ", err)
 	}
 
-	log.Println("Server exiting")
+	logrus.Info("Server exiting")
 }

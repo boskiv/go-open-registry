@@ -11,17 +11,17 @@ import (
 // AppConfig type struct
 type AppConfig struct {
 	App struct {
-		Port int
+		Port int `json:"port"`
 	}
 	Repo struct {
-		URL      string
-		Path     string
-		Instance *git.Repository
+		URL      string          `json:"url"`
+		Path     string          `json:"path"`
+		Instance *git.Repository `json:"instance"`
 	}
 	Storage struct {
-		Type     storage.Type
-		Path     string
-		Instance storage.GenericStorage
+		Type     storage.Type           `json:"type"`
+		Path     string                 `json:"path"`
+		Instance storage.GenericStorage `json:"instance"`
 	}
 }
 
