@@ -17,12 +17,20 @@ func CheckArgs(arg ...string) {
 	}
 }
 
-// CheckIfError should be used to naively panics if an error is not nil.
-func CheckIfError(err error) {
+// FatalIfError should be used to naively panics if an error is not nil.
+func FatalIfError(err error) {
 	if err == nil {
 		return
 	}
 	logrus.Fatal(err)
+}
+
+func ReturnIfError(err error) error {
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+	return nil
 }
 
 // Info should be used to describe the example commands that are about to run.

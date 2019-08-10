@@ -2,6 +2,8 @@ package config
 
 import (
 	"go-open-registry/internal/storage"
+	"go.mongodb.org/mongo-driver/mongo"
+	"time"
 
 	"github.com/sirupsen/logrus" //nolint:depguard
 	"github.com/spf13/viper"
@@ -17,11 +19,21 @@ type AppConfig struct {
 		URL      string          `json:"url"`
 		Path     string          `json:"path"`
 		Instance *git.Repository `json:"instance"`
+		Bot struct{
+			Name string	`json:"name"`
+			Email string `json:"email"`
+			Password string `json:"password"`
+		}
 	}
 	Storage struct {
 		Type     storage.Type           `json:"type"`
 		Path     string                 `json:"path"`
 		Instance storage.GenericStorage `json:"instance"`
+	}
+	DB struct{
+		URI	string `json:"uri"`
+		Timeout time.Duration `json:"timeout"`
+		Client *mongo.Client `json:"client"`
 	}
 }
 
@@ -34,8 +46,23 @@ func New() *AppConfig {
 	viper.SetDefault("port", 8000)
 	appConfig.App.Port = viper.GetInt("port")
 
+	viper.SetDefault("mongodb_uri", "mongodb://localhost:27017")
+	appConfig.DB.URI = viper.GetString("mongodb_uri")
+
+	viper.SetDefault("mongo_connection_timeout", 5)
+	appConfig.DB.Timeout = viper.GetDuration("mongo_connection_timeout")
+
 	viper.SetDefault("git_repo_url", "")
 	appConfig.Repo.URL = viper.GetString("git_repo_url")
+
+	viper.SetDefault("git_repo_username", "")
+	appConfig.Repo.Bot.Name = viper.GetString("git_repo_username")
+
+	viper.SetDefault("git_repo_email", "")
+	appConfig.Repo.Bot.Email = viper.GetString("git_repo_email")
+
+	viper.SetDefault("git_repo_password", "")
+	appConfig.Repo.Bot.Password = viper.GetString("git_repo_password")
 
 	viper.SetDefault("git_repo_path", "./tmp")
 	appConfig.Repo.Path = viper.GetString("git_repo_path")

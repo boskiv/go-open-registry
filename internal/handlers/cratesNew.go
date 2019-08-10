@@ -1,14 +1,16 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
 	"go-open-registry/internal/helpers"
 	"go-open-registry/internal/parser"
-
-	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"time"
 )
 
 // NewCrateHandler to serve cargo publish command
@@ -19,13 +21,45 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 		// Read the Body content
 		if c.Request.Body != nil && c.Request.ContentLength > 0 {
 			jsonFile, crateFile, err := parser.ReadBinary(c.Request.Body)
-			helpers.CheckIfError(err)
-			fmt.Printf("%s", jsonFile)
+			helpers.FatalIfError(err)
+			logrus.Debug(jsonFile)
 			var crateJSON parser.CrateJSON
 			err = json.Unmarshal(jsonFile, &crateJSON)
-			helpers.CheckIfError(err)
+			helpers.FatalIfError(err)
 
-			gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers)
+			// Validate version
+			collection := appConfig.DB.Client.Database("crates").Collection("packages")
+			ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
+			res, err := collection.InsertOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
+			if err != nil {
+				logrus.WithField("error", err).Error("Error 400")
+				c.JSON(400, gin.H{
+					"error": err,
+				})
+				return
+
+			}
+			if res != nil {
+				id := res.InsertedID
+				logrus.WithField("id", id).Info("Package version added to mongo")
+			}
+
+			commitError := gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers, jsonFile)
+			if commitError != nil {
+				logrus.WithField("commitError", commitError).Info("Error while commit to git")
+				res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
+				if err != nil {
+					c.JSON(400, gin.H{
+						"error": err,
+					})
+					return
+				}
+				if res != nil {
+					count := res.DeletedCount
+					logrus.WithField("count", count).Info("Deleted from database")
+				}
+
+			}
 			_, _ = appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
 		}
 
@@ -38,7 +72,6 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 			"other": {},
 		}
 		c.JSON(200, gin.H{
-			// Optional object of warnings to display to the user.
 			"warnings": resp,
 		})
 	}
