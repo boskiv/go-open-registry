@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
 )
@@ -20,9 +21,7 @@ func CheckIfError(err error) {
 	if err == nil {
 		return
 	}
-
-	fmt.Printf("\x1b[31;1m%s\x1b[0m\n", fmt.Sprintf("error: %s", err))
-	os.Exit(1)
+	logrus.Fatal(err)
 }
 
 // Info should be used to describe the example commands that are about to run.
@@ -36,15 +35,6 @@ func Warning(format string, args ...interface{}) {
 }
 
 func MakeCratePath(packageName string) []string {
-	// Packages with 1 character names are placed in a directory named 1.
-	// Packages with 2 character names are placed in a directory named 2.
-	// Packages with 3 character names are placed in the directory 3/{first-character}
-	// where {first-character} is the first character of the package name.
-	// All other packages are stored in directories named {first-two}/{second-two}
-	// where the top directory is the first two characters of the package name, and the
-	// next subdirectory is the third and fourth characters of the package name.
-	// For example, cargo would be stored in a file named ca/rg/cargo.
-	//
 	var path []string
 
 	switch len(packageName) {
@@ -59,4 +49,10 @@ func MakeCratePath(packageName string) []string {
 	}
 
 	return path
+}
+
+func FullCratePath() {
+	//withUploadDir := append([]string{localStorage.path}, paths...)
+	//_ = os.MkdirAll(strings.Join(withUploadDir, string(os.PathSeparator)), os.ModePerm)
+	//withPackageName := append(withUploadDir, packageName)
 }

@@ -1,4 +1,6 @@
 upload/
+tmpGit/
 vendor/
 .idea/
+.env
 go-open-registry
