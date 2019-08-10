@@ -8,13 +8,13 @@ type S3Storage struct {
 }
 
 // PutFile implementation
-func (s *S3Storage) PutFile(packageName, packageVersion string, content []byte) (Response, error) {
+func (s *S3Storage) PutFile(packageName, packageVersion string, content []byte) error {
 	logrus.Info("Put a file to S3 storage")
-	return Response{message: "Ok"}, nil
+	return nil
 }
 
 // GetFile implementation
-func (s *S3Storage) GetFile(filename string) ([]byte, error) {
+func (s *S3Storage) GetFile(packageName, packageVersion string) ([]byte, error) {
 	logrus.Info("Get a file from S3 storage")
 	return []byte{}, nil
 }

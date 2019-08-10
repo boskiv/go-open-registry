@@ -29,8 +29,6 @@ func New(appConfig *config.AppConfig) *git.Repository {
 		})
 	}
 
-
-
 	helpers.FatalIfError(err)
 	return repo
 }
@@ -131,8 +129,6 @@ func CommitCrateJSON(appConfig *config.AppConfig, packageName string, packageVer
 	}
 	//
 	logrus.Info(obj)
-
-
 
 	err = r.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{

@@ -28,7 +28,7 @@ func main() {
 	appConfig := config.New()
 	appRepo := gitregistry.New(appConfig)
 	appConfig.Repo.Instance = appRepo
-	appStorage := storage.New(appConfig.Storage.Type)
+	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
 	appConfig.Storage.Instance = appStorage
 
 
@@ -43,6 +43,7 @@ func main() {
 	} else {
 		logrus.WithField("mongo", appConfig.DB.URI).Info("Mongo connected")
 		appConfig.DB.Client = client
+
 		result, err := client.Database("crates").Collection("packages").Indexes().CreateOne(ctx, mongo.IndexModel{
 			Keys: bson.M{
 				"name":    1,
@@ -50,7 +51,10 @@ func main() {
 			},
 			Options: options.Index().SetUnique(true),
 		})
-		helpers.FatalIfError(err)
+		if err != nil {
+			println(err)
+			logrus.WithField("result", err).Info("Index already exist")
+		}
 		logrus.WithField("index", result).Info("Index created")
 	}
 
@@ -70,7 +74,7 @@ func main() {
 	engine.Use(ginlogrus.Logger(logger), gin.Recovery())
 
 	engine.PUT("/api/v1/crates/new", handlers.NewCrateHandler(appConfig))
-
+	engine.GET("/api/v1/crates/:name/:version/*download", handlers.GetCrateHandler(appConfig))
 	logrus.WithField("port", appConfig.App.Port).Info("Staring server on port")
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", appConfig.App.Port),

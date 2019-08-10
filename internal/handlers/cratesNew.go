@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -21,11 +23,18 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 		// Read the Body content
 		if c.Request.Body != nil && c.Request.ContentLength > 0 {
 			jsonFile, crateFile, err := parser.ReadBinary(c.Request.Body)
+			h := sha256.New()
+			h.Write(crateFile)
+			cksum := hex.EncodeToString(h.Sum(nil))
 			helpers.FatalIfError(err)
 			logrus.Debug(jsonFile)
 			var crateJSON parser.CrateJSON
 			err = json.Unmarshal(jsonFile, &crateJSON)
 			helpers.FatalIfError(err)
+			crateJSON.Cksum = cksum
+			logrus.WithField("cksum", cksum).Info("Set cksum")
+
+			jsonFileWithCksum, err := json.Marshal(crateJSON)
 
 			// Validate version
 			collection := appConfig.DB.Client.Database("crates").Collection("packages")
@@ -44,7 +53,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				logrus.WithField("id", id).Info("Package version added to mongo")
 			}
 
-			commitError := gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers, jsonFile)
+			commitError := gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers, jsonFileWithCksum)
 			if commitError != nil {
 				logrus.WithField("commitError", commitError).Info("Error while commit to git")
 				res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
@@ -60,7 +69,22 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				}
 
 			}
-			_, _ = appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
+			storageError := appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
+			if storageError != nil {
+				logrus.WithField("commitError", commitError).Info("Error while commit to git")
+				res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
+				if err != nil {
+					c.JSON(400, gin.H{
+						"error": storageError,
+					})
+					return
+				}
+				if res != nil {
+					count := res.DeletedCount
+					logrus.WithField("count", count).Info("Deleted from database")
+				}
+
+			}
 		}
 
 		resp := map[string][]string{
