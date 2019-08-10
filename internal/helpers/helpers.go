@@ -2,9 +2,10 @@ package helpers
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"os"
 	"strings"
+
+	"github.com/sirupsen/logrus" //nolint:depguard
 )
 
 // CheckArgs should be used to ensure the right command line arguments are
@@ -34,6 +35,8 @@ func Warning(format string, args ...interface{}) {
 	fmt.Printf("\x1b[36;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))
 }
 
+// MakeCratePath slice with package name parts
+// https://doc.rust-lang.org/cargo/reference/registries.html#index-format
 func MakeCratePath(packageName string) []string {
 	var path []string
 
@@ -51,6 +54,7 @@ func MakeCratePath(packageName string) []string {
 	return path
 }
 
+// FullCratePath Return full path with parts from MakeCratePath and package name
 func FullCratePath() {
 	//withUploadDir := append([]string{localStorage.path}, paths...)
 	//_ = os.MkdirAll(strings.Join(withUploadDir, string(os.PathSeparator)), os.ModePerm)

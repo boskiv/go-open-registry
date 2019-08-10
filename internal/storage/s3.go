@@ -1,18 +1,20 @@
 package storage
 
-import "github.com/sirupsen/logrus"
+import "github.com/sirupsen/logrus" //nolint:depguard
 
+// S3Storage  type struct
 type S3Storage struct {
 	Path string
 }
 
-func (s *S3Storage) PutFile(packageName string, packageVersion string, content []byte) (Response, error) {
+// PutFile implementation
+func (s *S3Storage) PutFile(packageName, packageVersion string, content []byte) (Response, error) {
 	logrus.Info("Put a file to S3 storage")
-	return Response{message:"Ok"}, nil
+	return Response{message: "Ok"}, nil
 }
 
+// GetFile implementation
 func (s *S3Storage) GetFile(filename string) ([]byte, error) {
 	logrus.Info("Get a file from S3 storage")
 	return []byte{}, nil
 }
-

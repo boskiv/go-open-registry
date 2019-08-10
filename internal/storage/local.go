@@ -1,18 +1,20 @@
 package storage
 
+import "github.com/sirupsen/logrus" //nolint:depguard
+
+// LocalStorage type struct
 type LocalStorage struct {
 	Path string
 }
 
-func (l *LocalStorage) PutFile(packageName string, packageVersion string, content []byte) (Response, error) {
-	panic("implement me")
-	return Response{message:"Ok"}, nil
+// PutFile implementation
+func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byte) (Response, error) {
+	logrus.Info("Put a file to local storage")
+	return Response{message: "Ok"}, nil
 }
 
+// GetFile implementation
 func (l *LocalStorage) GetFile(filename string) ([]byte, error) {
-	panic("implement me")
+	logrus.Info("Get a file from local storage")
 	return []byte{}, nil
 }
-
-
-

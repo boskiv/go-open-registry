@@ -1,26 +1,20 @@
 package storage
 
-import "github.com/sirupsen/logrus"
+import "github.com/sirupsen/logrus" //nolint:depguard
 
+// ArtifactoryStorage struct
 type ArtifactoryStorage struct {
 	Path string
 }
 
-func (a *ArtifactoryStorage) New(p Type) {
-	panic("implement me")
+// PutFile implementation
+func (a ArtifactoryStorage) PutFile(packageName, packageVersion string, content []byte) (Response, error) {
+	logrus.Info("Put a file to artifactory storage")
+	return Response{message: "Ok"}, nil
 }
 
-func (a *ArtifactoryStorage) NewStorage() {
-	logrus.Info("Init new Artifactory storage")
-}
-
-func (a *ArtifactoryStorage) PutFile(packageName string, packageVersion string, content []byte) (Response, error) {
-	logrus.Info("Put a file to Artifactory storage")
-	return Response{message:"Ok"}, nil
-}
-
-func (a *ArtifactoryStorage) GetFile(filename string) ([]byte, error) {
-	logrus.Info("Get a file from Artifactory storage")
+// GetFile implementation
+func (a ArtifactoryStorage) GetFile(filename string) ([]byte, error) {
+	logrus.Info("Get a file from artifactory storage")
 	return []byte{}, nil
 }
-

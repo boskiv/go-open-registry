@@ -1,5 +1,6 @@
 package parser
 
+// CrateDependency Struct to unmarshal Deps from cargo request
 type CrateDependency struct {
 	Name            string   `json:"name"`
 	Req             string   `json:"req"`
@@ -12,7 +13,8 @@ type CrateDependency struct {
 	Package         string   `json:"package"`
 }
 
-type CrateJson struct {
+// CrateJSON Struct to unmarshal JSON from cargo request
+type CrateJSON struct {
 	Name     string            `json:"name"`
 	Vers     string            `json:"vers"`
 	Deps     []CrateDependency `json:"deps"`

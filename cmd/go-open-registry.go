@@ -2,60 +2,25 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
-	"github.com/toorop/gin-logrus"
 	"go-open-registry/internal/config"
-	"go-open-registry/internal/gitRegistry"
-	"go-open-registry/internal/helpers"
-	"go-open-registry/internal/parser"
+	"go-open-registry/internal/gitregistry"
+	"go-open-registry/internal/handlers"
 	"go-open-registry/internal/storage"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus" //nolint:depguard
+	ginlogrus "github.com/toorop/gin-logrus"
 )
-
-
-
-func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
-
-	return func(c *gin.Context) {
-		gitRegistry.HeadRepo(appConfig.Repo.Instance)
-		// Read the Body content
-		if c.Request.Body != nil && c.Request.ContentLength > 0 {
-			jsonFile, crateFile, err := parser.ReadBinary(c.Request.Body)
-			helpers.CheckIfError(err)
-			fmt.Printf("%s", jsonFile)
-			var crateJson parser.CrateJson
-			err = json.Unmarshal(jsonFile, &crateJson)
-			helpers.CheckIfError(err)
-
-			gitRegistry.CommitCrateJson(appConfig, crateJson.Name, crateJson.Vers)
-			_, _ = appConfig.Storage.Instance.PutFile(crateJson.Name, crateJson.Vers, crateFile)
-		}
-
-		resp := map[string][]string{
-			// Array of strings of categories that are invalid and ignored.
-			"invalid_categories": {},
-			// Array of strings of badge names that are invalid and ignored.
-			"invalid_badges": {},
-			// Array of strings of arbitrary warnings to display to the user.
-			"other": {},
-		}
-		c.JSON(200, gin.H{
-			// Optional object of warnings to display to the user.
-			"warnings": resp,
-		})
-	}
-}
 
 func main() {
 	appConfig := config.New()
-	appRepo := gitRegistry.New(appConfig.Repo.Url)
+	appRepo := gitregistry.New(appConfig.Repo.URL)
 	appConfig.Repo.Instance = appRepo
 	appStorage := storage.New(appConfig.Storage.Type)
 	appConfig.Storage.Instance = appStorage
@@ -65,7 +30,7 @@ func main() {
 
 	engine.Use(ginlogrus.Logger(log), gin.Recovery())
 
-	engine.PUT("/api/v1/crates/new", NewCrateHandler(appConfig))
+	engine.PUT("/api/v1/crates/new", handlers.NewCrateHandler(appConfig))
 
 	logrus.WithField("port", appConfig.App.Port).Info("Staring server on port")
 	srv := &http.Server{
@@ -76,7 +41,7 @@ func main() {
 	go func() {
 		// service connections
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logrus.Fatal("listen: %s\n", err)
+			logrus.WithField("error", err).Fatal("listen: ")
 		}
 	}()
 

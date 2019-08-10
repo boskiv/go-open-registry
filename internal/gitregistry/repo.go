@@ -1,15 +1,17 @@
-package gitRegistry
+package gitregistry
 
 import (
-	"github.com/sirupsen/logrus"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/helpers"
-	"gopkg.in/src-d/go-git.v4"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/sirupsen/logrus" //nolint:depguard
+	"gopkg.in/src-d/go-git.v4"
 )
 
+// New instance of git repository
 func New(url string) *git.Repository {
 	logrus.WithFields(logrus.Fields{
 		"repo": url,
@@ -26,32 +28,38 @@ func New(url string) *git.Repository {
 	return repo
 }
 
+// HeadRepo information of repository
+// for example current branch Name and last Commit Hash
 func HeadRepo(repo *git.Repository) {
 	result, err := repo.Head()
 	helpers.CheckIfError(err)
-	helpers.Info("%s: %s",result.Name(), result.Hash())
+	helpers.Info("%s: %s", result.Name(), result.Hash())
 }
 
-func CommitCrateJson(appConfig *config.AppConfig,packageName string, content string) {
+// CommitCrateJSON information form crate file to git registry
+// if file exist, information will be append to it
+// It also manage directory structure followed by
+// https://doc.rust-lang.org/cargo/reference/registries.html#index-format
+func CommitCrateJSON(appConfig *config.AppConfig, packageName string, content string) {
 	r := appConfig.Repo.Instance
 	logrus.Info(r)
-	var fullJsonCratePath []string
-	fullJsonCratePath = append(fullJsonCratePath, appConfig.Repo.Path)
-	crateJsonPath := strings.Join(fullJsonCratePath,string(os.PathSeparator))
+	var fullJSONCratePath []string
+	fullJSONCratePath = append(fullJSONCratePath, appConfig.Repo.Path)
+	crateJSONPath := strings.Join(fullJSONCratePath, string(os.PathSeparator))
 
 	//paths := helpers.MakeCratePath(packageName)
 
-	crateDir, crateFile := path.Split(crateJsonPath)
+	crateDir, crateFile := path.Split(crateJSONPath)
 	logrus.WithFields(logrus.Fields{
 		"directory": crateDir,
-		"file": crateFile,
+		"file":      crateFile,
 	}).Info("Got path")
 	// create dir tree
-	err := os.MkdirAll(crateDir,os.ModePerm)
+	err := os.MkdirAll(crateDir, os.ModePerm)
 	helpers.CheckIfError(err)
 
 	// write file
-	//f, err := os.OpenFile(crateJsonPath,
+	//f, err := os.OpenFile(crateJSONPath,
 	//	os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	//if err != nil {
 	//	log.Println(err)
