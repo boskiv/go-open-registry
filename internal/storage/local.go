@@ -23,12 +23,11 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 		"version": packageVersion,
 	}).Info("Got package upload request")
 
-
 	var resultPath []string
 	resultPath = append(resultPath, l.Path)
 	resultPath = append(resultPath, packageName)
 	resultPath = append(resultPath, packageVersion)
-	resultPath = append(resultPath, packageName + "-" + packageVersion + ".crate")
+	resultPath = append(resultPath, packageName+"-"+packageVersion+".crate")
 	resultPathString := strings.Join(resultPath, string(os.PathSeparator))
 
 	crateDir, crateFile := path.Split(resultPathString)
@@ -58,7 +57,6 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 	h.Write(content)
 	cksum := hex.EncodeToString(h.Sum(nil))
 	logrus.WithField("cksum", cksum).Info("Content cksum from PutFile")
-
 	if _, err := f.Write(content); err != nil {
 
 		logrus.Error(err)
@@ -69,7 +67,7 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 }
 
 // GetFile implementation
-func (l *LocalStorage) GetFile(packageName, packageVersion string ) ([]byte, error) {
+func (l *LocalStorage) GetFile(packageName, packageVersion string) ([]byte, error) {
 	logrus.Info("Get a file from local storage")
 	filename := packageName + "-" + packageVersion + ".crate"
 	filenamePath := path.Join(l.Path, packageName, packageVersion, filename)
@@ -87,7 +85,7 @@ func (l *LocalStorage) GetFile(packageName, packageVersion string ) ([]byte, err
 	crateFileBytes := make([]byte, size)
 
 	bufr := bufio.NewReader(crateFile)
-	_,err = bufr.Read(crateFileBytes)
+	_, err = bufr.Read(crateFileBytes)
 
 	return crateFileBytes, nil
 }

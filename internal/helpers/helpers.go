@@ -25,14 +25,6 @@ func FatalIfError(err error) {
 	logrus.Fatal(err)
 }
 
-func ReturnIfError(err error) error {
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-	return nil
-}
-
 // Info should be used to describe the example commands that are about to run.
 func Info(format string, args ...interface{}) {
 	fmt.Printf("\x1b[34;1m%s\x1b[0m\n", fmt.Sprintf(format, args...))

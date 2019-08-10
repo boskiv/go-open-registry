@@ -19,9 +19,9 @@ type AppConfig struct {
 		URL      string          `json:"url"`
 		Path     string          `json:"path"`
 		Instance *git.Repository `json:"instance"`
-		Bot struct{
-			Name string	`json:"name"`
-			Email string `json:"email"`
+		Bot      struct {
+			Name     string `json:"name"`
+			Email    string `json:"email"`
 			Password string `json:"password"`
 		}
 	}
@@ -30,10 +30,10 @@ type AppConfig struct {
 		Path     string                 `json:"path"`
 		Instance storage.GenericStorage `json:"instance"`
 	}
-	DB struct{
-		URI	string `json:"uri"`
+	DB struct {
+		URI     string        `json:"uri"`
 		Timeout time.Duration `json:"timeout"`
-		Client *mongo.Client `json:"client"`
+		Client  *mongo.Client `json:"client"`
 	}
 }
 

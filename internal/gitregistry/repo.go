@@ -24,8 +24,8 @@ func New(appConfig *config.AppConfig) *git.Repository {
 	if repo == nil {
 		logrus.Info("Repo folder does not exist, make clone")
 		repo, err = git.PlainClone(appConfig.Repo.Path, false, &git.CloneOptions{
-			URL: appConfig.Repo.URL,
-			Auth: &http.BasicAuth{Username: appConfig.Repo.Bot.Name , Password: appConfig.Repo.Bot.Password},
+			URL:  appConfig.Repo.URL,
+			Auth: &http.BasicAuth{Username: appConfig.Repo.Bot.Name, Password: appConfig.Repo.Bot.Password},
 		})
 	}
 
@@ -99,16 +99,15 @@ func CommitCrateJSON(appConfig *config.AppConfig, packageName string, packageVer
 
 	addPackageName := append(folderStructure, packageName)
 	commitPath := strings.Join(addPackageName, string(os.PathSeparator))
-	logrus.WithField("path",commitPath).Info("Add file to stage")
+	logrus.WithField("path", commitPath).Info("Add file to stage")
 	_, err = w.Add(commitPath)
 	if err != nil {
 		logrus.Error(err)
 		return err
 	}
 
-
 	logrus.Info("Commit file to repo")
-	commit, err := w.Commit(fmt.Sprintf("Commit package %s version %s",packageName, packageVersion), &git.CommitOptions{
+	commit, err := w.Commit(fmt.Sprintf("Commit package %s version %s", packageName, packageVersion), &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  appConfig.Repo.Bot.Name,
 			Email: appConfig.Repo.Bot.Email,

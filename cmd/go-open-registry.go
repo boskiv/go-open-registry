@@ -24,14 +24,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func main() {
-	appConfig := config.New()
-	appRepo := gitregistry.New(appConfig)
-	appConfig.Repo.Instance = appRepo
-	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
-	appConfig.Storage.Instance = appStorage
-
-
+func InitDB(appConfig *config.AppConfig) {
 	ctx, cancel := context.WithTimeout(context.Background(), appConfig.DB.Timeout*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(appConfig.DB.URI))
 	helpers.FatalIfError(err)
@@ -57,6 +50,16 @@ func main() {
 		}
 		logrus.WithField("index", result).Info("Index created")
 	}
+}
+
+func main() {
+	appConfig := config.New()
+	appRepo := gitregistry.New(appConfig)
+	appConfig.Repo.Instance = appRepo
+	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
+	appConfig.Storage.Instance = appStorage
+
+	InitDB(appConfig)
 
 	logger := logrus.New()
 
@@ -98,7 +101,7 @@ func main() {
 	<-quit
 	logrus.Info("Shutdown Server ...")
 
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
 		logrus.WithField("error", err).Fatal("Server Shutdown: ", err)

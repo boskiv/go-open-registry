@@ -2,7 +2,6 @@ package storage
 
 import "github.com/sirupsen/logrus" //nolint:depguard
 
-
 // GenericStorage interface, for method implementation
 type GenericStorage interface {
 	PutFile(packageName, packageVersion string, content []byte) error

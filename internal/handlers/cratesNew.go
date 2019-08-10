@@ -12,6 +12,7 @@ import (
 	"go-open-registry/internal/helpers"
 	"go-open-registry/internal/parser"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 )
 
@@ -53,37 +54,12 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				logrus.WithField("id", id).Info("Package version added to mongo")
 			}
 
-			commitError := gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers, jsonFileWithCksum)
-			if commitError != nil {
-				logrus.WithField("commitError", commitError).Info("Error while commit to git")
-				res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
-				if err != nil {
-					c.JSON(400, gin.H{
-						"error": err,
-					})
-					return
-				}
-				if res != nil {
-					count := res.DeletedCount
-					logrus.WithField("count", count).Info("Deleted from database")
-				}
-
+			commitError, done := RegistryCommit(appConfig, crateJSON, jsonFileWithCksum, collection, ctx, c)
+			if done {
+				return
 			}
-			storageError := appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
-			if storageError != nil {
-				logrus.WithField("commitError", commitError).Info("Error while commit to git")
-				res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
-				if err != nil {
-					c.JSON(400, gin.H{
-						"error": storageError,
-					})
-					return
-				}
-				if res != nil {
-					count := res.DeletedCount
-					logrus.WithField("count", count).Info("Deleted from database")
-				}
-
+			if StoragePut(appConfig, crateJSON, crateFile, commitError, collection, ctx, c) {
+				return
 			}
 		}
 
@@ -99,4 +75,44 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 			"warnings": resp,
 		})
 	}
+}
+
+func StoragePut(appConfig *config.AppConfig, crateJSON parser.CrateJSON, crateFile []byte, commitError error, collection *mongo.Collection, ctx context.Context, c *gin.Context) bool {
+	storageError := appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
+	if storageError != nil {
+		logrus.WithField("commitError", commitError).Info("Error while commit to git")
+		res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": storageError,
+			})
+			return true
+		}
+		if res != nil {
+			count := res.DeletedCount
+			logrus.WithField("count", count).Info("Deleted from database")
+		}
+
+	}
+	return false
+}
+
+func RegistryCommit(appConfig *config.AppConfig, crateJSON parser.CrateJSON, jsonFileWithCksum []byte, collection *mongo.Collection, ctx context.Context, c *gin.Context) (error, bool) {
+	commitError := gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers, jsonFileWithCksum)
+	if commitError != nil {
+		logrus.WithField("commitError", commitError).Info("Error while commit to git")
+		res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
+		if err != nil {
+			c.JSON(400, gin.H{
+				"error": err,
+			})
+			return nil, true
+		}
+		if res != nil {
+			count := res.DeletedCount
+			logrus.WithField("count", count).Info("Deleted from database")
+		}
+
+	}
+	return commitError, false
 }
