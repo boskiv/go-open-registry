@@ -8,13 +8,13 @@ type ArtifactoryStorage struct {
 }
 
 // PutFile implementation
-func (a ArtifactoryStorage) PutFile(packageName, packageVersion string, content []byte) (Response, error) {
+func (a ArtifactoryStorage) PutFile(packageName, packageVersion string, content []byte) error {
 	logrus.Info("Put a file to artifactory storage")
-	return Response{message: "Ok"}, nil
+	return nil
 }
 
 // GetFile implementation
-func (a ArtifactoryStorage) GetFile(filename string) ([]byte, error) {
+func (a ArtifactoryStorage) GetFile(packageName, packageVersion string) ([]byte, error) {
 	logrus.Info("Get a file from artifactory storage")
 	return []byte{}, nil
 }

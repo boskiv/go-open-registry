@@ -2,26 +2,21 @@ package storage
 
 import "github.com/sirupsen/logrus" //nolint:depguard
 
-// Response struct to return from storage requests
-type Response struct {
-	message string
-}
-
 // GenericStorage interface, for method implementation
 type GenericStorage interface {
-	PutFile(packageName, packageVersion string, content []byte) (Response, error)
-	GetFile(filename string) ([]byte, error)
+	PutFile(packageName, packageVersion string, content []byte) error
+	GetFile(packageName, packageVersion string) ([]byte, error)
 }
 
 // New storage by Type
-func New(p Type) GenericStorage {
+func New(p Type, path string) GenericStorage {
 	switch p {
 	case Local:
-		return &LocalStorage{}
+		return &LocalStorage{Path: path}
 	case S3:
-		return &S3Storage{}
+		return &S3Storage{Path: path}
 	case Artifactory:
-		return &ArtifactoryStorage{}
+		return &ArtifactoryStorage{Path: path}
 	default:
 		logrus.WithField("storage", p.String()).Fatal("No storage defined")
 	}

@@ -7,7 +7,10 @@ import (
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
 	"go-open-registry/internal/handlers"
+	"go-open-registry/internal/helpers"
 	"go-open-registry/internal/storage"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,31 +20,64 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus" //nolint:depguard
 	ginlogrus "github.com/toorop/gin-logrus"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+func initDB(appConfig *config.AppConfig) {
+	ctx, cancel := context.WithTimeout(context.Background(), appConfig.DB.Timeout*time.Second)
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(appConfig.DB.URI))
+	helpers.FatalIfError(err)
+	defer cancel()
+
+	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		logrus.WithField("mongo", appConfig.DB.URI).Fatal("Mongo connection failed after timeout")
+	} else {
+		logrus.WithField("mongo", appConfig.DB.URI).Info("Mongo connected")
+		appConfig.DB.Client = client
+
+		result, err := client.Database("crates").Collection("packages").Indexes().CreateOne(ctx, mongo.IndexModel{
+			Keys: bson.M{
+				"name":    1,
+				"version": 1,
+			},
+			Options: options.Index().SetUnique(true),
+		})
+		if err != nil {
+			println(err)
+			logrus.WithField("result", err).Info("Index already exist")
+		}
+		logrus.WithField("index", result).Info("Index created")
+	}
+}
 
 func main() {
 	appConfig := config.New()
-	appRepo := gitregistry.New(appConfig.Repo.URL)
+	appRepo := gitregistry.New(appConfig)
 	appConfig.Repo.Instance = appRepo
-	appStorage := storage.New(appConfig.Storage.Type)
+	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
 	appConfig.Storage.Instance = appStorage
-	log := logrus.New()
+
+	initDB(appConfig)
+
+	logger := logrus.New()
 
 	if gin.Mode() != gin.ReleaseMode {
 		logrus.Info("Config: ")
 		jsonOutput, err := json.MarshalIndent(appConfig, "", "  ")
 		if err != nil {
-			log.Fatal(err)
+			logger.Fatal(err)
 		}
 		fmt.Println(string(jsonOutput))
 	}
 
 	engine := gin.New()
 
-	engine.Use(ginlogrus.Logger(log), gin.Recovery())
+	engine.Use(ginlogrus.Logger(logger), gin.Recovery())
 
 	engine.PUT("/api/v1/crates/new", handlers.NewCrateHandler(appConfig))
-
+	engine.GET("/api/v1/crates/:name/:version/*download", handlers.GetCrateHandler(appConfig))
 	logrus.WithField("port", appConfig.App.Port).Info("Staring server on port")
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", appConfig.App.Port),

@@ -1,32 +1,62 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
 	"go-open-registry/internal/helpers"
 	"go-open-registry/internal/parser"
-
-	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson"
+	"time"
 )
 
 // NewCrateHandler to serve cargo publish command
 func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 	return func(c *gin.Context) {
-		gitregistry.HeadRepo(appConfig.Repo.Instance)
 		// Read the Body content
 		if c.Request.Body != nil && c.Request.ContentLength > 0 {
 			jsonFile, crateFile, err := parser.ReadBinary(c.Request.Body)
-			helpers.CheckIfError(err)
-			fmt.Printf("%s", jsonFile)
+			cksum := helpers.CheckSum(crateFile)
+			helpers.FatalIfError(err)
+			logrus.Debug(jsonFile)
 			var crateJSON parser.CrateJSON
 			err = json.Unmarshal(jsonFile, &crateJSON)
-			helpers.CheckIfError(err)
+			helpers.FatalIfError(err)
+			crateJSON.Cksum = cksum
+			logrus.WithField("cksum", cksum).Info("Set cksum")
 
-			gitregistry.CommitCrateJSON(appConfig, crateJSON.Name, crateJSON.Vers)
-			_, _ = appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
+			jsonFileWithCksum, err := json.Marshal(crateJSON)
+
+			err = addDBVersion(appConfig, crateJSON)
+			if err != nil {
+				logrus.WithField("error", err).Error("Error 400")
+				c.JSON(400, gin.H{
+					"error": err,
+				})
+				return
+			}
+
+			err = registryAdd(appConfig, crateJSON, jsonFileWithCksum)
+			if err != nil {
+				logrus.WithField("error", err).Error("Error 400")
+				c.JSON(400, gin.H{
+					"error": err,
+				})
+				return
+			}
+
+			err = storagePut(appConfig, crateJSON, crateFile)
+			if err != nil {
+				logrus.WithField("error", err).Error("Error 400")
+				c.JSON(400, gin.H{
+					"error": err,
+				})
+				return
+			}
 		}
 
 		resp := map[string][]string{
@@ -38,8 +68,60 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 			"other": {},
 		}
 		c.JSON(200, gin.H{
-			// Optional object of warnings to display to the user.
 			"warnings": resp,
 		})
 	}
+}
+
+func storagePut(appConfig *config.AppConfig, crateJSON parser.CrateJSON, crateFile []byte) (err error) {
+	err = appConfig.Storage.Instance.PutFile(crateJSON.Name, crateJSON.Vers, crateFile)
+	if err != nil {
+		err = rollBackDBVersion(appConfig, crateJSON)
+		return err
+	}
+	return err
+}
+
+func registryAdd(appConfig *config.AppConfig, crateJSON parser.CrateJSON, jsonFile []byte) (err error) {
+	err = gitregistry.RegistryAdd(appConfig, crateJSON.Name, crateJSON.Vers, jsonFile)
+
+	if err != nil {
+		err = rollBackDBVersion(appConfig, crateJSON)
+		return err
+
+	}
+	return err
+}
+
+func addDBVersion(appConfig *config.AppConfig, crateJSON parser.CrateJSON) (err error) {
+	// Validate version
+	collection := appConfig.DB.Client.Database("crates").Collection("packages")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	res, err := collection.InsertOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
+	if err != nil {
+		return err
+	}
+	if res != nil {
+		id := res.InsertedID
+		logrus.WithField("id", id).Info("Package version added to mongo")
+	}
+	return nil
+}
+
+func rollBackDBVersion(appConfig *config.AppConfig, crateJSON parser.CrateJSON) (err error) {
+	// Validate version
+	collection := appConfig.DB.Client.Database("crates").Collection("packages")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	logrus.WithField("error", err).Info("Error while add to git registry")
+	res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
+	if err != nil {
+		return err
+	}
+	if res != nil {
+		count := res.DeletedCount
+		logrus.WithField("count", count).Info("Deleted from database")
+	}
+	return nil
 }

@@ -1,6 +1,8 @@
 package helpers
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"strings"
@@ -17,12 +19,19 @@ func CheckArgs(arg ...string) {
 	}
 }
 
-// CheckIfError should be used to naively panics if an error is not nil.
-func CheckIfError(err error) {
+// FatalIfError should be used to naively panics if an error is not nil.
+func FatalIfError(err error) {
 	if err == nil {
 		return
 	}
 	logrus.Fatal(err)
+}
+
+// CheckSum SHA256 of []byte return as string
+func CheckSum(content []byte) string {
+	h := sha256.New()
+	h.Write(content)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // Info should be used to describe the example commands that are about to run.
