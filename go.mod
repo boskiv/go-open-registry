@@ -3,6 +3,7 @@ module go-open-registry
 go 1.12
 
 require (
+	github.com/aws/aws-sdk-go v1.22.3
 	github.com/gin-gonic/gin v1.4.0
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/sirupsen/logrus v1.4.2
