@@ -2,18 +2,16 @@ package gitregistry
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/helpers"
-	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	"os"
 	"path"
 	"strings"
 	"time"
-
-	"github.com/sirupsen/logrus" //nolint:depguard
-	"gopkg.in/src-d/go-git.v4"
 )
 
 // New instance of git repository
@@ -34,83 +32,135 @@ func New(appConfig *config.AppConfig) *git.Repository {
 	return repo
 }
 
-// HeadRepo information of repository
-// for example current branch Name and last Commit Hash
-func HeadRepo(repo *git.Repository) {
-	result, err := repo.Head()
-	helpers.FatalIfError(err)
-	helpers.Info("%s: %s", result.Name(), result.Hash())
-}
-
-// CommitCrateJSON information form crate file to git registry
-// if file exist, information will be append to it
-// It also manage directory structure followed by
-// https://doc.rust-lang.org/cargo/reference/registries.html#index-format
-func CommitCrateJSON(appConfig *config.AppConfig, packageName string, packageVersion string, content []byte) error {
+// RegistryCommit
+// * create path in git repo,
+// * create file with content,
+// * commit it to repo
+// * push commit to git remote origin
+func RegistryAdd(
+	appConfig *config.AppConfig,
+	packageName string,
+	packageVersion string,
+	content []byte) error {
 	logrus.WithFields(logrus.Fields{
 		"package": packageName,
 		"version": packageVersion,
 		"size":    len(content),
 	}).Info("Commit function called")
-	r := appConfig.Repo.Instance
 
-	folderStructure, err, e := writeFile(packageName, appConfig, content)
-	if e != nil {
-		return e
-	}
-	logrus.Info("Getting git work tree")
-	w, err := r.Worktree()
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-
-	addPackageName := append(folderStructure, packageName)
-	commitPath := strings.Join(addPackageName, string(os.PathSeparator))
-	logrus.WithField("path", commitPath).Info("Add file to stage")
-	_, err = w.Add(commitPath)
-	if err != nil {
-		logrus.Error(err)
-		return err
-	}
-
-	commit, err := commit(err, w, packageName, packageVersion, appConfig)
+	// crate folder structure
+	result, err := makePath(appConfig, packageName)
 	if err != nil {
 		return err
 	}
+	logrus.WithFields(logrus.Fields{
+		"folder": result,
+	}).Info("Folder created")
 
-	logrus.Info("Getting new head")
-	obj, err := r.CommitObject(commit)
+	// create a file in path
+	result, err = createFile(result, content)
 	if err != nil {
-		logrus.Error(err)
 		return err
 	}
-	//
-	logrus.Info(obj)
+	logrus.WithFields(logrus.Fields{
+		"file": result,
+	}).Info("File created")
 
-	err, e = pushRepo(err, r, appConfig)
-	if e != nil {
-		return e
+	// Commit file to git
+	result, err = commitFile(appConfig, packageName, packageVersion)
+	if err != nil {
+		return err
 	}
-	return err
+	logrus.WithFields(logrus.Fields{
+		"commit": result,
+	}).Info("File committed")
+
+	// push repo to origin
+	result, err = pushRegistryRepo(appConfig)
+	if err != nil {
+		return err
+	}
+	logrus.WithFields(logrus.Fields{
+		"push": result,
+	}).Info("Changes pushed")
+	return nil
 }
 
-func pushRepo(err error, r *git.Repository, appConfig *config.AppConfig) (error, error) {
-	err = r.Push(&git.PushOptions{
+// takes config
+// push repo changes to origin
+// return updated last commit hash or error
+func pushRegistryRepo(appConfig *config.AppConfig) (result string, err error) {
+	err = appConfig.Repo.Instance.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
 			Username: appConfig.Repo.Bot.Name,
 			Password: appConfig.Repo.Bot.Password,
 		},
 	})
+	ref, err := appConfig.Repo.Instance.Head()
 	if err != nil {
-		logrus.Error(err)
-		return nil, err
+		return result, err
 	}
-	return err, nil
+	result = ref.Hash().String()
+	return result, err
 }
 
-func writeFile(packageName string, appConfig *config.AppConfig, content []byte) ([]string, error, error) {
-	// Get slice of directories to append to git registry root
+// commit file to gir repository
+func commitFile(appConfig *config.AppConfig, packageName, packageVersion string) (result string, err error) {
+	folderStructure := helpers.MakeCratePath(packageName)
+	var resultPath []string
+	resultPath = append(resultPath, folderStructure...)
+	resultPath = append(resultPath, packageName)
+	resultPathString := strings.Join(resultPath, string(os.PathSeparator))
+	w, err := appConfig.Repo.Instance.Worktree()
+	if err != nil {
+		return result, err
+	}
+	_, err = w.Add(resultPathString)
+	if err != nil {
+		logrus.WithField("error", err).Error("Error adding to local repo")
+		return "", err
+	} else {
+		logrus.WithField("file", resultPathString).Info("File added to local repo")
+	}
+
+	commitMsg := fmt.Sprintf("Commit package %s version %s",
+		packageName, packageVersion)
+	logrus.Info("Commit file to repo")
+	commit, err := w.Commit(commitMsg, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  appConfig.Repo.Bot.Name,
+			Email: appConfig.Repo.Bot.Email,
+			When:  time.Now(),
+		},
+	})
+
+	obj, err := appConfig.Repo.Instance.CommitObject(commit)
+	if err != nil {
+		return result,err
+	}
+	result = obj.Hash.String()
+	return result, err
+}
+
+// append text to file by provided path and []byte content
+// if file does not exist it will be created
+// line will end with \n character
+func createFile(resultPathString string, content []byte) (result string, err error) {
+	f, err := os.OpenFile(resultPathString,
+		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	_, err = f.WriteString(string(content) + "\n")
+	//removedGitFolder := strings.Split(resultPathString, string(os.PathSeparator))
+
+	return resultPathString, nil
+}
+
+// make path in git repository
+// following https://doc.rust-lang.org/cargo/reference/registries.html#index-format
+func makePath(appConfig *config.AppConfig, packageName string) (result string, err error) {
 	folderStructure := helpers.MakeCratePath(packageName)
 	var resultPath []string
 	resultPath = append(resultPath, appConfig.Repo.Path)
@@ -123,39 +173,6 @@ func writeFile(packageName string, appConfig *config.AppConfig, content []byte) 
 		"file":      crateFile,
 	}).Info("Got path")
 	// create dir tree
-	err := os.MkdirAll(crateDir, os.ModePerm)
-	if err != nil {
-		logrus.Error(err)
-		return nil, nil, err
-	}
-	// write file
-	f, err := os.OpenFile(resultPathString,
-		os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		logrus.Error(err)
-		return nil, nil, err
-	}
-	defer f.Close()
-	if _, err := f.WriteString(string(content) + "\n"); err != nil {
-
-		logrus.Error(err)
-		return nil, nil, err
-	}
-	return folderStructure, err, nil
-}
-
-func commit(err error, w *git.Worktree, packageName string, packageVersion string, appConfig *config.AppConfig) (plumbing.Hash, error) {
-	logrus.Info("Commit file to repo")
-	commit, err := w.Commit(fmt.Sprintf("Commit package %s version %s", packageName, packageVersion), &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  appConfig.Repo.Bot.Name,
-			Email: appConfig.Repo.Bot.Email,
-			When:  time.Now(),
-		},
-	})
-	if err != nil {
-		logrus.Error(err)
-		return plumbing.Hash{}, err
-	}
-	return commit, nil
+	err = os.MkdirAll(crateDir, os.ModePerm)
+	return resultPathString, err
 }
