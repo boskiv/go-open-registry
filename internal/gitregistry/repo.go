@@ -32,7 +32,7 @@ func New(appConfig *config.AppConfig) *git.Repository {
 	return repo
 }
 
-// RegistryCommit
+// RegistryAdd
 // * create path in git repo,
 // * create file with content,
 // * commit it to repo
@@ -119,9 +119,9 @@ func commitFile(appConfig *config.AppConfig, packageName, packageVersion string)
 	if err != nil {
 		logrus.WithField("error", err).Error("Error adding to local repo")
 		return "", err
-	} else {
-		logrus.WithField("file", resultPathString).Info("File added to local repo")
 	}
+
+	logrus.WithField("file", resultPathString).Info("File added to local repo")
 
 	commitMsg := fmt.Sprintf("Commit package %s version %s",
 		packageName, packageVersion)
@@ -136,7 +136,7 @@ func commitFile(appConfig *config.AppConfig, packageName, packageVersion string)
 
 	obj, err := appConfig.Repo.Instance.CommitObject(commit)
 	if err != nil {
-		return result,err
+		return result, err
 	}
 	result = obj.Hash.String()
 	return result, err
