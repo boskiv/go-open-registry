@@ -32,7 +32,7 @@ func New(appConfig *config.AppConfig) *git.Repository {
 	return repo
 }
 
-// RegistryAdd
+// RegistryAdd a git wrapper
 // * create path in git repo,
 // * create file with content,
 // * commit it to repo
