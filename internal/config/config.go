@@ -10,6 +10,13 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 )
 
+// RepoBot struct with credentials
+type RepoBot struct {
+Name     string `json:"name"`
+Email    string `json:"email"`
+Password string `json:"password"`
+}
+
 // AppConfig type struct
 type AppConfig struct {
 	App struct {
@@ -19,11 +26,7 @@ type AppConfig struct {
 		URL      string          `json:"url"`
 		Path     string          `json:"path"`
 		Instance *git.Repository `json:"instance"`
-		Bot      struct {
-			Name     string `json:"name"`
-			Email    string `json:"email"`
-			Password string `json:"password"`
-		}
+		Bot 	RepoBot
 	}
 	Storage struct {
 		Type     storage.Type           `json:"type"`
