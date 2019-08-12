@@ -30,7 +30,10 @@ func FatalIfError(err error) {
 // CheckSum SHA256 of []byte return as string
 func CheckSum(content []byte) string {
 	h := sha256.New()
-	h.Write(content)
+	_, err := h.Write(content)
+	if err != nil {
+		logrus.Error(err)
+	}
 	return hex.EncodeToString(h.Sum(nil))
 }
 

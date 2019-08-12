@@ -7,14 +7,29 @@ git:
   depth: 1
 
 install: true
-  
-before_script:
-  - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-  - chmod +x ./cc-test-reporter
-  - ./cc-test-reporter before-build
 
-script:
-  - go test -v -race -cover ./...  # Run all the tests with the race detector enabled
-
-after_script:
-  - ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
+jobs:
+  include:
+    - stage: test
+      before_script:
+        - curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $(go env GOPATH)/bin v1.17.1
+        - curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
+        - chmod +x ./cc-test-reporter
+        - ./cc-test-reporter before-build
+      script:
+        - go test -v -race -coverprofile c.out ./...
+        - golangci-lint run
+      after_script:
+        - ./cc-test-reporter -d after-build -p go-open-registry --exit-code $TRAVIS_TEST_RESULT
+    - stage: release tagged version
+      if: tag IS present
+      script:
+        - echo "Travis tag $TRAVIS_TAG"
+        - export ALIAS=`echo $TRAVIS_COMMIT | cut -c 1-7`
+        - export TAG=`echo $TRAVIS_TAG | sed 's/\./-/g' | sed 's/.*/v&/'`
+        # Build and release to Docker Hub
+        - docker login -u $DOCKER_USER -p $DOCKER_PASS
+        - export REPO=$DOCKER_REPO
+        - docker build -f Dockerfile -t $REPO:$TRAVIS_TAG .
+        - docker tag $REPO:$TRAVIS_TAG $REPO:latest
+        - docker push $REPO:$TRAVIS_TAG

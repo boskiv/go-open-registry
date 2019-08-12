@@ -21,7 +21,7 @@ func ReadBinary(r io.Reader) (json []byte, crate []byte, err error) {
 		logrus.Error(fmt.Errorf("read JSON failed: %s", err))
 	}
 
-	if err := binary.Read(r, binary.LittleEndian, &size); err != nil {
+	if err = binary.Read(r, binary.LittleEndian, &size); err != nil {
 		logrus.Error(fmt.Errorf("read .crate size failed: %s", err))
 	}
 

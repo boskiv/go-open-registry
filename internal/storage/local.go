@@ -54,7 +54,10 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 	defer f.Close()
 
 	h := sha256.New()
-	h.Write(content)
+	_, err = h.Write(content)
+	if err != nil {
+		logrus.Error(err)
+	}
 	cksum := hex.EncodeToString(h.Sum(nil))
 	logrus.WithField("cksum", cksum).Info("Content cksum from PutFile")
 	if _, err := f.Write(content); err != nil {
@@ -87,5 +90,5 @@ func (l *LocalStorage) GetFile(packageName, packageVersion string) ([]byte, erro
 	bufr := bufio.NewReader(crateFile)
 	_, err = bufr.Read(crateFileBytes)
 
-	return crateFileBytes, nil
+	return crateFileBytes, err
 }
