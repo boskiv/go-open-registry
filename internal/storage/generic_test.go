@@ -18,6 +18,7 @@ func TestNew(t *testing.T) {
 		{"Return Local Storage", args{Local, ""}, &LocalStorage{Path: ""}},
 		{"Return S3 Storage", args{S3, ""}, &S3Storage{Path: ""}},
 		{"Return Artifactory Storage", args{Artifactory, ""}, &ArtifactoryStorage{Path: ""}},
+		{"Return Unknown Storage", args{Unknown, ""}, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

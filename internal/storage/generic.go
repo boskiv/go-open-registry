@@ -1,9 +1,5 @@
 package storage
 
-import (
-	"go-open-registry/internal/log"
-) //nolint:depguard
-
 // GenericStorage interface, for method implementation
 type GenericStorage interface {
 	PutFile(packageName, packageVersion string, content []byte) error
@@ -20,11 +16,9 @@ func New(p Type, path string) GenericStorage {
 	case Artifactory:
 		return &ArtifactoryStorage{Path: path}
 	default:
-		log.FatalWithFields("No storage defined", log.Fields{
-			"storage": p.String(),
-		})
+		return nil
 	}
-	return nil
+
 }
 
 // Type storage Enum
