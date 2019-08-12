@@ -7,7 +7,7 @@ import (
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
 	"go-open-registry/internal/handlers"
-	"go-open-registry/internal/helpers"
+	"go-open-registry/internal/log"
 	"go-open-registry/internal/storage"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -24,17 +24,21 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func initDB(appConfig *config.AppConfig) {
+func initDB(appConfig *config.AppConfig) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), appConfig.DB.Timeout*time.Second)
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(appConfig.DB.URI))
-	helpers.FatalIfError(err)
+	if err != nil {
+		log.FatalWithFields("Mongo connection failed after timeout", log.Fields{"err": err})
+		return err
+	}
 	defer cancel()
 
 	err = client.Ping(ctx, readpref.Primary())
 	if err != nil {
-		logrus.WithField("mongo", appConfig.DB.URI).Fatal("Mongo connection failed after timeout")
+		log.FatalWithFields("Mongo ping failed after timeout", log.Fields{"mongo": appConfig.DB.URI})
+		return err
 	} else {
-		logrus.WithField("mongo", appConfig.DB.URI).Info("Mongo connected")
+		log.InfoWithFields("Mongo connected", log.Fields{"mongo": appConfig.DB.URI})
 		appConfig.DB.Client = client
 
 		result, err := client.Database("crates").Collection("packages").Indexes().CreateOne(ctx, mongo.IndexModel{
@@ -45,10 +49,11 @@ func initDB(appConfig *config.AppConfig) {
 			Options: options.Index().SetUnique(true),
 		})
 		if err != nil {
-			println(err)
-			logrus.WithField("result", err).Info("Index already exist")
+			log.InfoWithFields("Index already exist", log.Fields{"result": err})
+			return nil // Todo: handle duplicate index
 		}
-		logrus.WithField("index", result).Info("Index created")
+		log.InfoWithFields("Index created",log.Fields{"index": result})
+		return err
 	}
 }
 
@@ -59,9 +64,15 @@ func main() {
 	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
 	appConfig.Storage.Instance = appStorage
 
-	initDB(appConfig)
+	err := initDB(appConfig)
+	if err != nil {
+		log.ErrorWithFields("Error from InitDB", log.Fields{
+			"err": err,
+		})
+	}
 
 	logger := logrus.New()
+
 
 	if gin.Mode() != gin.ReleaseMode {
 		logrus.Info("Config: ")

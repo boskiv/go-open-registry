@@ -10,6 +10,11 @@ services:
       MONGODB_URI: mongodb://mongo:27017
       GIT_REPO_URL: https://github.com/boskiv/open-registry-index
       GIT_REPO_USER: boskiv
+    ports:
+      - 8000:8000
+    depends_on:
+      - mongo
+      - minio
   minio:
     image: minio/minio
     command: server /data

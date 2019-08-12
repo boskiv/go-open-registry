@@ -1,6 +1,8 @@
 package storage
 
-import "github.com/sirupsen/logrus" //nolint:depguard
+import (
+	"go-open-registry/internal/log"
+)
 
 // ArtifactoryStorage struct
 type ArtifactoryStorage struct {
@@ -9,12 +11,12 @@ type ArtifactoryStorage struct {
 
 // PutFile implementation
 func (a ArtifactoryStorage) PutFile(packageName, packageVersion string, content []byte) error {
-	logrus.Info("Put a file to artifactory storage")
+	log.Info("Put a file to artifactory storage")
 	return nil
 }
 
 // GetFile implementation
 func (a ArtifactoryStorage) GetFile(packageName, packageVersion string) ([]byte, error) {
-	logrus.Info("Get a file from artifactory storage")
+	log.Info("Get a file from artifactory storage")
 	return []byte{}, nil
 }

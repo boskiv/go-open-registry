@@ -1,6 +1,8 @@
 package storage
 
-import "github.com/sirupsen/logrus" //nolint:depguard
+import (
+	"go-open-registry/internal/log"
+) //nolint:depguard
 
 // GenericStorage interface, for method implementation
 type GenericStorage interface {
@@ -18,7 +20,9 @@ func New(p Type, path string) GenericStorage {
 	case Artifactory:
 		return &ArtifactoryStorage{Path: path}
 	default:
-		logrus.WithField("storage", p.String()).Fatal("No storage defined")
+		log.FatalWithFields("No storage defined", log.Fields{
+			"storage": p.String(),
+		})
 	}
 	return nil
 }

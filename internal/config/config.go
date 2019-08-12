@@ -1,11 +1,11 @@
 package config
 
 import (
+	"go-open-registry/internal/log"
 	"go-open-registry/internal/storage"
 	"go.mongodb.org/mongo-driver/mongo"
 	"time"
 
-	"github.com/sirupsen/logrus" //nolint:depguard
 	"github.com/spf13/viper"
 	"gopkg.in/src-d/go-git.v4"
 )
@@ -75,16 +75,16 @@ func New() *AppConfig {
 	switch viper.GetString("storage_type") {
 	case "local":
 		appConfig.Storage.Type = storage.Local
-		logrus.Info("Using local storage")
+		log.Info("Using local storage")
 	case "s3":
 		appConfig.Storage.Type = storage.S3
-		logrus.Info("Using S3 storage")
+		log.Info("Using S3 storage")
 	case "artifactory":
 		appConfig.Storage.Type = storage.Artifactory
-		logrus.Info("Using artifactory storage")
+		log.Info("Using artifactory storage")
 	default:
-		logrus.WithField("storage", viper.GetString("storage")).
-			Fatal("Storage config can be set one of: 'local', 's3', 'artifactory'")
+		log.FatalWithFields("Storage config can be set one of: 'local', 's3', 'artifactory'",
+			log.Fields{"storage": viper.GetString("storage")})
 	}
 
 	return &appConfig

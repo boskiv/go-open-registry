@@ -1,6 +1,8 @@
 package storage
 
-import "github.com/sirupsen/logrus" //nolint:depguard
+import (
+	"go-open-registry/internal/log"
+)
 
 // S3Storage  type struct
 type S3Storage struct {
@@ -9,12 +11,12 @@ type S3Storage struct {
 
 // PutFile implementation
 func (s *S3Storage) PutFile(packageName, packageVersion string, content []byte) error {
-	logrus.Info("Put a file to S3 storage")
+	log.Info("Put a file to S3 storage")
 	return nil
 }
 
 // GetFile implementation
 func (s *S3Storage) GetFile(packageName, packageVersion string) ([]byte, error) {
-	logrus.Info("Get a file from S3 storage")
+	log.Info("Get a file from S3 storage")
 	return []byte{}, nil
 }
