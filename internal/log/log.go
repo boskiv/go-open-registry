@@ -25,7 +25,7 @@ func Debug(args ...interface{}) {
 	if logger.Level >= logrus.DebugLevel {
 		entry := logger.WithFields(logrus.Fields{})
 		entry.Data["file"] = fileInfo(2)
-		entry.Debug(args)
+		entry.Debug(args...)
 	}
 }
 
@@ -110,22 +110,18 @@ func FatalWithFields(l interface{}, f Fields) {
 	}
 }
 
-// Panic logs a message at level Panic on the standard logger.
+// Panic logs a message at level Panic on the standard logger
 func Panic(args ...interface{}) {
-	if logger.Level >= logrus.PanicLevel {
-		entry := logger.WithFields(logrus.Fields{})
-		entry.Data["file"] = fileInfo(2)
-		entry.Panic(args...)
-	}
+	entry := logger.WithFields(logrus.Fields{})
+	entry.Data["file"] = fileInfo(2)
+	entry.Panic(args...)
 }
 
-// Debug logs a message with fields at level Debug on the standard logger.
+// Panic logs a message with fields at level Panic on the standard logger.
 func PanicWithFields(l interface{}, f Fields) {
-	if logger.Level >= logrus.PanicLevel {
-		entry := logger.WithFields(logrus.Fields(f))
-		entry.Data["file"] = fileInfo(2)
-		entry.Panic(l)
-	}
+	entry := logger.WithFields(logrus.Fields(f))
+	entry.Data["file"] = fileInfo(2)
+	entry.Panic(l)
 }
 
 func fileInfo(skip int) string {
