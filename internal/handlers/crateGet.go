@@ -28,7 +28,15 @@ func GetCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 			logrus.Error(err)
 		}
 		h := sha256.New()
-		h.Write(crateFile)
+		_, err = h.Write(crateFile)
+		if err != nil {
+			logrus.WithField("error", err).Error("Error 400")
+			c.JSON(400, gin.H{
+				"error": err,
+			})
+			return
+		}
+
 		cksum := hex.EncodeToString(h.Sum(nil))
 		logrus.WithField("cksum", cksum).Info("Set cksum")
 		crateFileReader := bytes.NewReader(crateFile)

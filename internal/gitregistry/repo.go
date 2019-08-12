@@ -96,6 +96,10 @@ func pushRegistryRepo(appConfig *config.AppConfig) (result string, err error) {
 			Password: appConfig.Repo.Bot.Password,
 		},
 	})
+	if err != nil {
+		return result, err
+	}
+
 	ref, err := appConfig.Repo.Instance.Head()
 	if err != nil {
 		return result, err
@@ -133,6 +137,9 @@ func commitFile(appConfig *config.AppConfig, packageName, packageVersion string)
 			When:  time.Now(),
 		},
 	})
+	if err != nil {
+		return result, err
+	}
 
 	obj, err := appConfig.Repo.Instance.CommitObject(commit)
 	if err != nil {
@@ -155,7 +162,7 @@ func createFile(resultPathString string, content []byte) (result string, err err
 	_, err = f.WriteString(string(content) + "\n")
 	//removedGitFolder := strings.Split(resultPathString, string(os.PathSeparator))
 
-	return resultPathString, nil
+	return resultPathString, err
 }
 
 // make path in git repository

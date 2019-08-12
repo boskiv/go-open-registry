@@ -30,6 +30,13 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 			logrus.WithField("cksum", cksum).Info("Set cksum")
 
 			jsonFileWithCksum, err := json.Marshal(crateJSON)
+			if err != nil {
+				logrus.WithField("error", err).Error("Error 400")
+				c.JSON(400, gin.H{
+					"error": err,
+				})
+				return
+			}
 
 			err = addDBVersion(appConfig, crateJSON)
 			if err != nil {
