@@ -28,12 +28,12 @@ func TestNew(t *testing.T) {
 			Type     storage.Type           `json:"type"`
 			Path     string                 `json:"path"`
 			Instance storage.GenericStorage `json:"instance"`
-		}{storage.Local,"upload",nil},
+		}{storage.Local, "upload", nil},
 		DB: struct {
 			URI     string        `json:"uri"`
 			Timeout time.Duration `json:"timeout"`
 			Client  *mongo.Client `json:"client"`
-		}{"mongodb://localhost:27017",5,nil},
+		}{"mongodb://localhost:27017", 5, nil},
 	}
 
 	tests := []struct {

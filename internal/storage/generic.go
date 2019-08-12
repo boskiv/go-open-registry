@@ -37,7 +37,7 @@ const (
 	S3
 	// Artifactory storage type
 	Artifactory
-	// Unknown
+	// Unknown storage type
 	Unknown
 )
 

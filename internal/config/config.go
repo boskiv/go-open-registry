@@ -12,9 +12,9 @@ import (
 
 // RepoBot struct with credentials
 type RepoBot struct {
-Name     string `json:"name"`
-Email    string `json:"email"`
-Password string `json:"password"`
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
 }
 
 // AppConfig type struct
@@ -26,7 +26,7 @@ type AppConfig struct {
 		URL      string          `json:"url"`
 		Path     string          `json:"path"`
 		Instance *git.Repository `json:"instance"`
-		Bot 	RepoBot
+		Bot      RepoBot
 	}
 	Storage struct {
 		Type     storage.Type           `json:"type"`

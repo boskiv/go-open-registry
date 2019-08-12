@@ -21,8 +21,8 @@ func Test_createFile(t *testing.T) {
 		wantResult string
 		wantErr    bool
 	}{
-		{"Simple", args{"testFile",[]byte{}},"testFile",false},
-		{"err", args{"/testFile",[]byte{}},"",true},
+		{"Simple", args{"testFile", []byte{}}, "testFile", false},
+		{"err", args{"/testFile", []byte{}}, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -64,12 +64,12 @@ func Test_makePath(t *testing.T) {
 			Type     storage.Type           `json:"type"`
 			Path     string                 `json:"path"`
 			Instance storage.GenericStorage `json:"instance"`
-		}{storage.Local,"upload",nil},
+		}{storage.Local, "upload", nil},
 		DB: struct {
 			URI     string        `json:"uri"`
 			Timeout time.Duration `json:"timeout"`
 			Client  *mongo.Client `json:"client"`
-		}{"mongodb://localhost:27017",5,nil},
+		}{"mongodb://localhost:27017", 5, nil},
 	}
 
 	tests := []struct {
@@ -78,10 +78,10 @@ func Test_makePath(t *testing.T) {
 		wantResult string
 		wantErr    bool
 	}{
-		{"First",args{
+		{"First", args{
 			appConfig:   _appConfig,
 			packageName: "nohup",
-		},"tmpGit/no/hu/nohup",false},
+		}, "tmpGit/no/hu/nohup", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -15,9 +15,9 @@ func TestNew(t *testing.T) {
 		args args
 		want GenericStorage
 	}{
-		{"Return Local Storage",args{Local,""},&LocalStorage{Path:""}},
-		{"Return S3 Storage",args{S3,""},&S3Storage{Path:""}},
-		{"Return Artifactory Storage",args{Artifactory,""},&ArtifactoryStorage{Path:""}},
+		{"Return Local Storage", args{Local, ""}, &LocalStorage{Path: ""}},
+		{"Return S3 Storage", args{S3, ""}, &S3Storage{Path: ""}},
+		{"Return Artifactory Storage", args{Artifactory, ""}, &ArtifactoryStorage{Path: ""}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -34,10 +34,10 @@ func TestType_String(t *testing.T) {
 		name1 Type
 		want  string
 	}{
-		{"Local",Local, "Local"},
-		{"S3",S3, "S3"},
-		{"Artifactory",Artifactory, "Artifactory"},
-		{"Unknown",Unknown, "Unknown"},
+		{"Local", Local, "Local"},
+		{"S3", S3, "S3"},
+		{"Artifactory", Artifactory, "Artifactory"},
+		{"Unknown", Unknown, "Unknown"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
