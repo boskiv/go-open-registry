@@ -33,7 +33,6 @@ func initDB(appConfig *config.AppConfig) (err error) {
 		return err
 	}
 
-
 	err = client.Ping(ctx, readpref.Primary())
 	if err != nil {
 		log.FatalWithFields("Mongo ping failed after timeout", log.Fields{"mongo": appConfig.DB.URI})
@@ -54,7 +53,7 @@ func initDB(appConfig *config.AppConfig) (err error) {
 		log.InfoWithFields("Index already exist", log.Fields{"result": err})
 		return nil // Todo: handle duplicate index
 	}
-	log.InfoWithFields("Index created",log.Fields{"index": result})
+	log.InfoWithFields("Index created", log.Fields{"index": result})
 	return err
 
 }
@@ -73,9 +72,6 @@ func main() {
 		})
 	}
 
-
-
-
 	if gin.Mode() != gin.ReleaseMode {
 		log.SetLogLevel(logrus.DebugLevel)
 		logrus.Info("Config: ")
@@ -88,7 +84,6 @@ func main() {
 		// gin release mode
 		log.SetLogLevel(logrus.ErrorLevel)
 	}
-
 
 	engine := gin.New()
 

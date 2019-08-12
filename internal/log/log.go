@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Logger is main global logger
 var Logger = logrus.New()
 
 // Fields wraps logrus.Fields, which is a map[string]interface{}
