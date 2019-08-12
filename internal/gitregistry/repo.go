@@ -2,9 +2,9 @@ package gitregistry
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/helpers"
+	"go-open-registry/internal/log"
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -16,19 +16,28 @@ import (
 
 // New instance of git repository
 func New(appConfig *config.AppConfig) *git.Repository {
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("Init repo started", log.Fields{
 		"repo": appConfig.Repo.URL,
-	}).Info("Init repo started")
+	})
 	repo, err := git.PlainOpen(appConfig.Repo.Path)
+	if err != nil {
+		log.ErrorWithFields("Error while open repo", log.Fields{
+			"err": err,
+		})
+	}
 	if repo == nil {
-		logrus.Info("Repo folder does not exist, make clone")
+		log.Info("Repo folder does not exist, make clone")
 		repo, err = git.PlainClone(appConfig.Repo.Path, false, &git.CloneOptions{
 			URL:  appConfig.Repo.URL,
 			Auth: &http.BasicAuth{Username: appConfig.Repo.Bot.Name, Password: appConfig.Repo.Bot.Password},
 		})
+		if err != nil {
+			log.ErrorWithFields("Error while clone repo", log.Fields{
+				"err": err,
+			})
+		}
 	}
 
-	helpers.FatalIfError(err)
 	return repo
 }
 
@@ -42,47 +51,59 @@ func RegistryAdd(
 	packageName string,
 	packageVersion string,
 	content []byte) error {
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("RegistryAdd called", log.Fields{
 		"package": packageName,
 		"version": packageVersion,
 		"size":    len(content),
-	}).Info("Commit function called")
+	})
 
 	// crate folder structure
 	result, err := makePath(appConfig, packageName)
 	if err != nil {
+		log.ErrorWithFields("Error make path", log.Fields{
+			"err": err,
+		})
 		return err
 	}
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("Folder created", log.Fields{
 		"folder": result,
-	}).Info("Folder created")
+	})
 
 	// create a file in path
 	result, err = createFile(result, content)
 	if err != nil {
+		log.ErrorWithFields("Error create file", log.Fields{
+			"err": err,
+		})
 		return err
 	}
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("File created", log.Fields{
 		"file": result,
-	}).Info("File created")
+	})
 
 	// Commit file to git
 	result, err = commitFile(appConfig, packageName, packageVersion)
 	if err != nil {
+		log.ErrorWithFields("Error commit to repo", log.Fields{
+			"err": err,
+		})
 		return err
 	}
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("File committed", log.Fields{
 		"commit": result,
-	}).Info("File committed")
+	})
 
 	// push repo to origin
 	result, err = pushRegistryRepo(appConfig)
 	if err != nil {
+		log.ErrorWithFields("Error pushing to repo", log.Fields{
+			"err": err,
+		})
 		return err
 	}
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("Changes pushed", log.Fields{
 		"push": result,
-	}).Info("Changes pushed")
+	})
 	return nil
 }
 
@@ -97,6 +118,9 @@ func pushRegistryRepo(appConfig *config.AppConfig) (result string, err error) {
 		},
 	})
 	if err != nil {
+		log.ErrorWithFields("Error pushing to repo", log.Fields{
+			"err": err,
+		})
 		return result, err
 	}
 
@@ -121,15 +145,17 @@ func commitFile(appConfig *config.AppConfig, packageName, packageVersion string)
 	}
 	_, err = w.Add(resultPathString)
 	if err != nil {
-		logrus.WithField("error", err).Error("Error adding to local repo")
+		log.ErrorWithFields("Error adding to local repo", log.Fields{"error": err})
 		return "", err
 	}
 
-	logrus.WithField("file", resultPathString).Info("File added to local repo")
+	log.InfoWithFields("File added to local repo", log.Fields{"file": resultPathString})
 
 	commitMsg := fmt.Sprintf("Commit package %s version %s",
 		packageName, packageVersion)
-	logrus.Info("Commit file to repo")
+	log.InfoWithFields("Commit file to repo", log.Fields{
+		"message": commitMsg,
+	})
 	commit, err := w.Commit(commitMsg, &git.CommitOptions{
 		Author: &object.Signature{
 			Name:  appConfig.Repo.Bot.Name,
@@ -175,10 +201,10 @@ func makePath(appConfig *config.AppConfig, packageName string) (result string, e
 	resultPath = append(resultPath, packageName)
 	resultPathString := strings.Join(resultPath, string(os.PathSeparator))
 	crateDir, crateFile := path.Split(resultPathString)
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("Got path", log.Fields{
 		"directory": crateDir,
 		"file":      crateFile,
-	}).Info("Got path")
+	})
 	// create dir tree
 	err = os.MkdirAll(crateDir, os.ModePerm)
 	return resultPathString, err

@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/sirupsen/logrus"
+	"go-open-registry/internal/log"
 	"os"
 	"path"
 	"strings"
@@ -17,11 +17,11 @@ type LocalStorage struct {
 
 // PutFile implementation
 func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byte) error {
-	logrus.Info("Put a file to local storage")
-	logrus.WithFields(logrus.Fields{
+	log.Info("Put a file to local storage")
+	log.InfoWithFields("Got package upload request", log.Fields{
 		"package": packageName,
 		"version": packageVersion,
-	}).Info("Got package upload request")
+	})
 
 	var resultPath []string
 	resultPath = append(resultPath, l.Path)
@@ -31,14 +31,16 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 	resultPathString := strings.Join(resultPath, string(os.PathSeparator))
 
 	crateDir, crateFile := path.Split(resultPathString)
-	logrus.WithFields(logrus.Fields{
+	log.InfoWithFields("Got path", log.Fields{
 		"directory": crateDir,
 		"file":      crateFile,
-	}).Info("Got path")
+	})
 	// create dir tree
 	err := os.MkdirAll(crateDir, os.ModePerm)
 	if err != nil {
-		logrus.Error(err)
+		log.ErrorWithFields("Error mkdir", log.Fields{
+			"err": err,
+		})
 		return err
 	}
 
@@ -47,7 +49,9 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 	f, err := os.Create(resultPathString)
 
 	if err != nil {
-		logrus.Error(err)
+		log.ErrorWithFields("Error create file", log.Fields{
+			"err": err,
+		})
 		return err
 	}
 
@@ -56,13 +60,19 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 	h := sha256.New()
 	_, err = h.Write(content)
 	if err != nil {
-		logrus.Error(err)
+		log.ErrorWithFields("Error make hash", log.Fields{
+			"err": err,
+		})
 	}
 	cksum := hex.EncodeToString(h.Sum(nil))
-	logrus.WithField("cksum", cksum).Info("Content cksum from PutFile")
+	log.InfoWithFields("Content cksum from PutFile", log.Fields{
+		"cksum": cksum,
+	})
 	if _, err := f.Write(content); err != nil {
 
-		logrus.Error(err)
+		log.ErrorWithFields("Error write file", log.Fields{
+			"err": err,
+		})
 		return err
 	}
 
@@ -71,24 +81,31 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 
 // GetFile implementation
 func (l *LocalStorage) GetFile(packageName, packageVersion string) ([]byte, error) {
-	logrus.Info("Get a file from local storage")
 	filename := packageName + "-" + packageVersion + ".crate"
 	filenamePath := path.Join(l.Path, packageName, packageVersion, filename)
+	log.InfoWithFields("Get a file from local storage", log.Fields{
+		"path": filenamePath,
+	})
 	crateFile, err := os.Open(filenamePath)
 	if err != nil {
-		logrus.Error(err)
+		log.ErrorWithFields("Error open file path", log.Fields{
+			"err": err,
+		})
+		return nil, err
 	}
 	defer crateFile.Close()
 	stats, statsErr := crateFile.Stat()
 	if statsErr != nil {
 		return nil, statsErr
 	}
-	logrus.Info(stats)
+	log.InfoWithFields("", log.Fields{
+		"stats": stats,
+	})
 	var size = stats.Size()
 	crateFileBytes := make([]byte, size)
 
-	bufr := bufio.NewReader(crateFile)
-	_, err = bufr.Read(crateFileBytes)
+	buffer := bufio.NewReader(crateFile)
+	_, err = buffer.Read(crateFileBytes)
 
 	return crateFileBytes, err
 }

@@ -7,7 +7,7 @@ import (
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
 	"go-open-registry/internal/handlers"
-	"go-open-registry/internal/helpers"
+	"go-open-registry/internal/log"
 	"go-open-registry/internal/storage"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -24,32 +24,38 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func initDB(appConfig *config.AppConfig) {
+func initDB(appConfig *config.AppConfig) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), appConfig.DB.Timeout*time.Second)
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(appConfig.DB.URI))
-	helpers.FatalIfError(err)
 	defer cancel()
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(appConfig.DB.URI))
+	if err != nil {
+		log.FatalWithFields("Mongo connection failed after timeout", log.Fields{"err": err})
+		return err
+	}
 
 	err = client.Ping(ctx, readpref.Primary())
 	if err != nil {
-		logrus.WithField("mongo", appConfig.DB.URI).Fatal("Mongo connection failed after timeout")
-	} else {
-		logrus.WithField("mongo", appConfig.DB.URI).Info("Mongo connected")
-		appConfig.DB.Client = client
-
-		result, err := client.Database("crates").Collection("packages").Indexes().CreateOne(ctx, mongo.IndexModel{
-			Keys: bson.M{
-				"name":    1,
-				"version": 1,
-			},
-			Options: options.Index().SetUnique(true),
-		})
-		if err != nil {
-			println(err)
-			logrus.WithField("result", err).Info("Index already exist")
-		}
-		logrus.WithField("index", result).Info("Index created")
+		log.FatalWithFields("Mongo ping failed after timeout", log.Fields{"mongo": appConfig.DB.URI})
+		return err
 	}
+
+	log.InfoWithFields("Mongo connected", log.Fields{"mongo": appConfig.DB.URI})
+	appConfig.DB.Client = client
+
+	result, err := client.Database("crates").Collection("packages").Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.M{
+			"name":    1,
+			"version": 1,
+		},
+		Options: options.Index().SetUnique(true),
+	})
+	if err != nil {
+		log.InfoWithFields("Index already exist", log.Fields{"result": err})
+		return nil // Todo: handle duplicate index
+	}
+	log.InfoWithFields("Index created", log.Fields{"index": result})
+	return err
+
 }
 
 func main() {
@@ -59,22 +65,29 @@ func main() {
 	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
 	appConfig.Storage.Instance = appStorage
 
-	initDB(appConfig)
-
-	logger := logrus.New()
+	err := initDB(appConfig)
+	if err != nil {
+		log.ErrorWithFields("Error from InitDB", log.Fields{
+			"err": err,
+		})
+	}
 
 	if gin.Mode() != gin.ReleaseMode {
+		log.SetLogLevel(logrus.DebugLevel)
 		logrus.Info("Config: ")
 		jsonOutput, err := json.MarshalIndent(appConfig, "", "  ")
 		if err != nil {
-			logger.Fatal(err)
+			log.Fatal(err)
 		}
 		fmt.Println(string(jsonOutput))
+	} else {
+		// gin release mode
+		log.SetLogLevel(logrus.ErrorLevel)
 	}
 
 	engine := gin.New()
 
-	engine.Use(ginlogrus.Logger(logger), gin.Recovery())
+	engine.Use(ginlogrus.Logger(log.Logger), gin.Recovery())
 
 	engine.PUT("/api/v1/crates/new", handlers.NewCrateHandler(appConfig))
 	engine.GET("/api/v1/crates/:name/:version/*download", handlers.GetCrateHandler(appConfig))

@@ -1,7 +1,5 @@
 package storage
 
-import "github.com/sirupsen/logrus" //nolint:depguard
-
 // GenericStorage interface, for method implementation
 type GenericStorage interface {
 	PutFile(packageName, packageVersion string, content []byte) error
@@ -18,9 +16,9 @@ func New(p Type, path string) GenericStorage {
 	case Artifactory:
 		return &ArtifactoryStorage{Path: path}
 	default:
-		logrus.WithField("storage", p.String()).Fatal("No storage defined")
+		return nil
 	}
-	return nil
+
 }
 
 // Type storage Enum
@@ -33,6 +31,8 @@ const (
 	S3
 	// Artifactory storage type
 	Artifactory
+	// Unknown storage type
+	Unknown
 )
 
 // Storage type to String

@@ -3,11 +3,12 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/gin-gonic/gin"
-	"github.com/sirupsen/logrus"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
 	"go-open-registry/internal/helpers"
+	"go-open-registry/internal/log"
 	"go-open-registry/internal/parser"
 	"go.mongodb.org/mongo-driver/bson"
 	"time"
@@ -20,18 +21,27 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 		// Read the Body content
 		if c.Request.Body != nil && c.Request.ContentLength > 0 {
 			jsonFile, crateFile, err := parser.ReadBinary(c.Request.Body)
-			cksum := helpers.CheckSum(crateFile)
-			helpers.FatalIfError(err)
-			logrus.Debug(jsonFile)
+			cksum := helpers.CheckSHA256Sum(crateFile)
+			if err != nil {
+				log.ErrorWithFields("Error while parser.ReadBinary repo", log.Fields{
+					"err": err,
+				})
+			}
 			var crateJSON parser.CrateJSON
 			err = json.Unmarshal(jsonFile, &crateJSON)
-			helpers.FatalIfError(err)
+			if err != nil {
+				log.ErrorWithFields("Error while json.Unmarshal repo", log.Fields{
+					"err": err,
+				})
+			}
 			crateJSON.Cksum = cksum
-			logrus.WithField("cksum", cksum).Info("Set cksum")
+			log.InfoWithFields("Content cksum", log.Fields{
+				"cksum": cksum,
+			})
 
 			jsonFileWithCksum, err := json.Marshal(crateJSON)
 			if err != nil {
-				logrus.WithField("error", err).Error("Error 400")
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})
@@ -40,7 +50,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			err = addDBVersion(appConfig, crateJSON)
 			if err != nil {
-				logrus.WithField("error", err).Error("Error 400")
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})
@@ -49,7 +59,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			err = registryAdd(appConfig, crateJSON, jsonFileWithCksum)
 			if err != nil {
-				logrus.WithField("error", err).Error("Error 400")
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})
@@ -58,7 +68,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			err = storagePut(appConfig, crateJSON, crateFile)
 			if err != nil {
-				logrus.WithField("error", err).Error("Error 400")
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})
@@ -91,11 +101,12 @@ func storagePut(appConfig *config.AppConfig, crateJSON parser.CrateJSON, crateFi
 
 func registryAdd(appConfig *config.AppConfig, crateJSON parser.CrateJSON, jsonFile []byte) (err error) {
 	err = gitregistry.RegistryAdd(appConfig, crateJSON.Name, crateJSON.Vers, jsonFile)
-
+	log.ErrorWithFields("Error while add file to registry", log.Fields{
+		"err": err,
+	})
 	if err != nil {
 		err = rollBackDBVersion(appConfig, crateJSON)
 		return err
-
 	}
 	return err
 }
@@ -111,24 +122,33 @@ func addDBVersion(appConfig *config.AppConfig, crateJSON parser.CrateJSON) (err 
 	}
 	if res != nil {
 		id := res.InsertedID
-		logrus.WithField("id", id).Info("Package version added to mongo")
+		log.InfoWithFields("Package version added to mongo", log.Fields{"id": id})
 	}
 	return nil
 }
 
 func rollBackDBVersion(appConfig *config.AppConfig, crateJSON parser.CrateJSON) (err error) {
 	// Validate version
+	log.InfoWithFields("Rolling back record", log.Fields{
+		"package": crateJSON.Name,
+		"version": crateJSON.Vers,
+	})
+
 	collection := appConfig.DB.Client.Database("crates").Collection("packages")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	logrus.WithField("error", err).Info("Error while add to git registry")
+
 	res, err := collection.DeleteOne(ctx, bson.M{"name": crateJSON.Name, "version": crateJSON.Vers})
 	if err != nil {
+		log.ErrorWithFields("rollBackDBVersion: Error while deleting key from db", log.Fields{
+			"err": err,
+		})
 		return err
 	}
 	if res != nil {
+		err = errors.New("rollBackDBVersion: previous step failed")
 		count := res.DeletedCount
-		logrus.WithField("count", count).Info("Deleted from database")
+		log.InfoWithFields("Deleted from database", log.Fields{"count": count})
 	}
-	return nil
+	return err
 }
