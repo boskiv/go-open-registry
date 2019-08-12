@@ -4,4 +4,17 @@ services:
     image: mongo
     ports:
       - 27017:27017
+  registry:
+    image: boskiv/cargo-registry:0.0.2
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      GIT_REPO_URL: https://github.com/boskiv/open-registry-index
+      GIT_REPO_USER: boskiv
+  minio:
+    image: minio/minio
+    command: server /data
+    ports:
+      - 9000:9000
+  
+
 
