@@ -2,9 +2,7 @@ package storage
 
 import (
 	"go-open-registry/internal/log"
-	"io/ioutil"
 	"os"
-	"path"
 	"reflect"
 	"testing"
 )
@@ -78,17 +76,7 @@ func TestLocalStorage_GetFile(t *testing.T) {
 		})
 	}
 
-	dir, err := ioutil.ReadDir("tmp")
-	if err != nil {
-		log.Error(err)
-	}
-	for _, d := range dir {
-		err = os.RemoveAll(path.Join([]string{"tmp", d.Name()}...))
-		if err != nil {
-			log.Error(err)
-		}
-	}
-	err = os.Remove("tmp")
+	err := os.RemoveAll("tmp")
 	if err != nil {
 		log.Error(err)
 	}
