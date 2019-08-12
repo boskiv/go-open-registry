@@ -41,7 +41,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			jsonFileWithCksum, err := json.Marshal(crateJSON)
 			if err != nil {
-				log.ErrorWithFields("Error 400 throw",log.Fields{"error": err})
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})
@@ -50,7 +50,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			err = addDBVersion(appConfig, crateJSON)
 			if err != nil {
-				log.ErrorWithFields("Error 400 throw",log.Fields{"error": err})
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})
@@ -59,7 +59,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			err = registryAdd(appConfig, crateJSON, jsonFileWithCksum)
 			if err != nil {
-				log.ErrorWithFields("Error 400 throw",log.Fields{"error": err})
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})
@@ -68,7 +68,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 
 			err = storagePut(appConfig, crateJSON, crateFile)
 			if err != nil {
-				log.ErrorWithFields("Error 400 throw",log.Fields{"error": err})
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
 					"error": err,
 				})

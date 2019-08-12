@@ -18,7 +18,7 @@ type LocalStorage struct {
 // PutFile implementation
 func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byte) error {
 	log.Info("Put a file to local storage")
-	log.InfoWithFields("Got package upload request",log.Fields{
+	log.InfoWithFields("Got package upload request", log.Fields{
 		"package": packageName,
 		"version": packageVersion,
 	})
@@ -31,7 +31,7 @@ func (l *LocalStorage) PutFile(packageName, packageVersion string, content []byt
 	resultPathString := strings.Join(resultPath, string(os.PathSeparator))
 
 	crateDir, crateFile := path.Split(resultPathString)
-	log.InfoWithFields("Got path",log.Fields{
+	log.InfoWithFields("Got path", log.Fields{
 		"directory": crateDir,
 		"file":      crateFile,
 	})

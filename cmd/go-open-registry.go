@@ -26,35 +26,37 @@ import (
 
 func initDB(appConfig *config.AppConfig) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), appConfig.DB.Timeout*time.Second)
+	defer cancel()
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(appConfig.DB.URI))
 	if err != nil {
 		log.FatalWithFields("Mongo connection failed after timeout", log.Fields{"err": err})
 		return err
 	}
-	defer cancel()
+
 
 	err = client.Ping(ctx, readpref.Primary())
 	if err != nil {
 		log.FatalWithFields("Mongo ping failed after timeout", log.Fields{"mongo": appConfig.DB.URI})
 		return err
-	} else {
-		log.InfoWithFields("Mongo connected", log.Fields{"mongo": appConfig.DB.URI})
-		appConfig.DB.Client = client
-
-		result, err := client.Database("crates").Collection("packages").Indexes().CreateOne(ctx, mongo.IndexModel{
-			Keys: bson.M{
-				"name":    1,
-				"version": 1,
-			},
-			Options: options.Index().SetUnique(true),
-		})
-		if err != nil {
-			log.InfoWithFields("Index already exist", log.Fields{"result": err})
-			return nil // Todo: handle duplicate index
-		}
-		log.InfoWithFields("Index created",log.Fields{"index": result})
-		return err
 	}
+
+	log.InfoWithFields("Mongo connected", log.Fields{"mongo": appConfig.DB.URI})
+	appConfig.DB.Client = client
+
+	result, err := client.Database("crates").Collection("packages").Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.M{
+			"name":    1,
+			"version": 1,
+		},
+		Options: options.Index().SetUnique(true),
+	})
+	if err != nil {
+		log.InfoWithFields("Index already exist", log.Fields{"result": err})
+		return nil // Todo: handle duplicate index
+	}
+	log.InfoWithFields("Index created",log.Fields{"index": result})
+	return err
+
 }
 
 func main() {
@@ -71,21 +73,26 @@ func main() {
 		})
 	}
 
-	logger := logrus.New()
+
 
 
 	if gin.Mode() != gin.ReleaseMode {
+		log.SetLogLevel(logrus.DebugLevel)
 		logrus.Info("Config: ")
 		jsonOutput, err := json.MarshalIndent(appConfig, "", "  ")
 		if err != nil {
-			logger.Fatal(err)
+			log.Fatal(err)
 		}
 		fmt.Println(string(jsonOutput))
+	} else {
+		// gin release mode
+		log.SetLogLevel(logrus.ErrorLevel)
 	}
+
 
 	engine := gin.New()
 
-	engine.Use(ginlogrus.Logger(logger), gin.Recovery())
+	engine.Use(ginlogrus.Logger(log.Logger), gin.Recovery())
 
 	engine.PUT("/api/v1/crates/new", handlers.NewCrateHandler(appConfig))
 	engine.GET("/api/v1/crates/:name/:version/*download", handlers.GetCrateHandler(appConfig))

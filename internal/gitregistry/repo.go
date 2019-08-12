@@ -16,7 +16,7 @@ import (
 
 // New instance of git repository
 func New(appConfig *config.AppConfig) *git.Repository {
-	log.InfoWithFields("Init repo started",log.Fields{
+	log.InfoWithFields("Init repo started", log.Fields{
 		"repo": appConfig.Repo.URL,
 	})
 	repo, err := git.PlainOpen(appConfig.Repo.Path)
@@ -38,7 +38,6 @@ func New(appConfig *config.AppConfig) *git.Repository {
 		}
 	}
 
-
 	return repo
 }
 
@@ -52,7 +51,7 @@ func RegistryAdd(
 	packageName string,
 	packageVersion string,
 	content []byte) error {
-	log.InfoWithFields("RegistryAdd called",log.Fields{
+	log.InfoWithFields("RegistryAdd called", log.Fields{
 		"package": packageName,
 		"version": packageVersion,
 		"size":    len(content),
@@ -78,7 +77,7 @@ func RegistryAdd(
 		})
 		return err
 	}
-	log.InfoWithFields("File created",log.Fields{
+	log.InfoWithFields("File created", log.Fields{
 		"file": result,
 	})
 
@@ -90,7 +89,7 @@ func RegistryAdd(
 		})
 		return err
 	}
-	log.InfoWithFields("File committed",log.Fields{
+	log.InfoWithFields("File committed", log.Fields{
 		"commit": result,
 	})
 
@@ -102,7 +101,7 @@ func RegistryAdd(
 		})
 		return err
 	}
-	log.InfoWithFields("Changes pushed",log.Fields{
+	log.InfoWithFields("Changes pushed", log.Fields{
 		"push": result,
 	})
 	return nil
@@ -120,7 +119,7 @@ func pushRegistryRepo(appConfig *config.AppConfig) (result string, err error) {
 	})
 	if err != nil {
 		log.ErrorWithFields("Error pushing to repo", log.Fields{
-			"err":err,
+			"err": err,
 		})
 		return result, err
 	}
@@ -146,7 +145,7 @@ func commitFile(appConfig *config.AppConfig, packageName, packageVersion string)
 	}
 	_, err = w.Add(resultPathString)
 	if err != nil {
-		log.ErrorWithFields("Error adding to local repo",log.Fields{"error": err})
+		log.ErrorWithFields("Error adding to local repo", log.Fields{"error": err})
 		return "", err
 	}
 
