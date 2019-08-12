@@ -18,6 +18,7 @@ jobs:
         - ./cc-test-reporter before-build
       script:
         - go test -v -race -coverprofile c.out ./...
+        - ./codecov.sh
         - golangci-lint run
       after_script:
         - ./cc-test-reporter -d after-build -p go-open-registry --exit-code $TRAVIS_TEST_RESULT
