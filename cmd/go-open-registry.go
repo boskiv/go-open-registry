@@ -62,7 +62,7 @@ func main() {
 	appConfig := config.New()
 	appRepo := gitregistry.New(appConfig)
 	appConfig.Repo.Instance = appRepo
-	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path)
+	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path, appConfig.Storage.Login, appConfig.Storage.Password)
 	appConfig.Storage.Instance = appStorage
 
 	err := initDB(appConfig)
@@ -82,7 +82,7 @@ func main() {
 		fmt.Println(string(jsonOutput))
 	} else {
 		// gin release mode
-		log.SetLogLevel(logrus.ErrorLevel)
+		log.SetLogLevel(logrus.InfoLevel)
 	}
 
 	engine := gin.New()

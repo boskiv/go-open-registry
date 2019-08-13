@@ -7,22 +7,24 @@ import (
 
 func TestNew(t *testing.T) {
 	type args struct {
-		p    Type
-		path string
+		p        Type
+		path     string
+		login    string
+		password string
 	}
 	tests := []struct {
 		name string
 		args args
 		want GenericStorage
 	}{
-		{"Return Local Storage", args{Local, ""}, &LocalStorage{Path: ""}},
-		{"Return S3 Storage", args{S3, ""}, &S3Storage{Path: ""}},
-		{"Return Artifactory Storage", args{Artifactory, ""}, &ArtifactoryStorage{Path: ""}},
-		{"Return Unknown Storage", args{Unknown, ""}, nil},
+		{"Return Local Storage", args{Local, "", "", ""}, &LocalStorage{Path: ""}},
+		{"Return S3 Storage", args{S3, "", "", ""}, &S3Storage{Path: "", Endpoint: "", AccessKey: "", SecretKey: ""}},
+		{"Return Artifactory Storage", args{Artifactory, "", "", ""}, &ArtifactoryStorage{Path: "", Login: "", Password: ""}},
+		{"Return Unknown Storage", args{Unknown, "", "", ""}, nil},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := New(tt.args.p, tt.args.path); !reflect.DeepEqual(got, tt.want) {
+			if got := New(tt.args.p, tt.args.path, tt.args.login, tt.args.password); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("New() = %v, want %v", got, tt.want)
 			}
 		})
