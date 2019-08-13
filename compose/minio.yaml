@@ -1,0 +1,45 @@
+version: '3'
+services:
+  mongo:
+    image: mongo
+    ports:
+      - 27017:27017
+  minio:
+    image: minio/minio
+    command: server /data
+    ports:
+      - 9000:9000
+  registry:
+    image: boskiv/cargo-registry:0.1.0
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      GIT_REPO_URL: http://gogs:3000/crates/crates-index
+      GIT_REPO_USER: crates
+      GIT_REPO_EMAIL: crates@cargo.local
+      GIT_REPO_PASSWORD: crates
+    ports:
+      - 8000:8000
+    depends_on:
+      - mongo
+      - gogs
+  gogs:
+    image: gogs/gogs
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - DB_TYPE=postgres
+      - DB_HOST=postgres:5432
+      - DB_NAME=gogs
+      - DB_USER=gogs
+      - DB_PASSWD=gogs
+    ports:
+      - "3000:3000"
+  postgres:
+    image: postgres:alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=gogs
+      - POSTGRES_PASSWORD=gogs
+      - POSTGRES_DB=gogs
+
+

@@ -238,9 +238,61 @@ https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
     > Empty
 
 ## Run
+### Prerequisite
 
-* `docker-compose up -d`
-* `./go-open-registry` 
+Make a accessible git repository with config.json
+
+https://doc.rust-lang.org/cargo/reference/registries.html#index-format
+
+```json
+{
+    "dl": "http://localhost:8000/api/v1/crates",
+    "api": "http://localhost:8000"
+}
+```
+
+> The keys are: <br>
+  dl: This is the URL for downloading crates listed in the index.<br>
+  api: This is the base URL for the web API. 
+
+### Developer 
+
+Run this configuration just to have third-party services
+
+* mongo
+* minio
+* artifactory
+
+#### Steps
+
+* `docker-compose run -f compose/developer.yaml`
+* `go build cmd/go-open-registry`
+* `./go-open-registry`
+
+### Test with local storage
+
+* `docker-compose up -d -f compose/local.yaml`
+* `open http://localhost:3000` for Gitea and create an account and repository.
+* put config.json file to the repository
+* `use http://localhost:8000` to Configure cargo
+
+### Test with artifactory
+
+* `docker-compose up -d -f compose/artifactory.yaml`
+* `open http://localhost:8081` for Artifactory, create a login `bot` and password `password`.
+* create a repository named crates, and give user bot a write access to this repo.
+* `open http://localhost:3000` for Gitea and create an account and repository.
+* put config.json file to the repository
+* `use http://localhost:8000` to Configure cargo
+
+### Test with s3 storage
+
+* `docker-compose up -d -f compose/minio.yaml`
+* `open http://localhost:9000` for Minio and login with `minio` as user and `minio123` as password.
+* create a bucket named `crates`
+* `open http://localhost:3000` for Gitea and create an account and repository.
+* put config.json file to the repository
+* `use http://localhost:8000` to Configure cargo
 
 
 # Cargo configuration example
