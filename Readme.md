@@ -8,33 +8,242 @@
 Crates.io cargo registry Golang implementation using amazing Gin web framework
 https://github.com/gin-gonic/gin 
 
-## Configure
+Based on https://doc.rust-lang.org/cargo/reference/registries.html
 
-Environment Variables available
-* GIT_REPO_URL is git repository for index storage
-* GIT_REPO_PATH directory to clone repo (default 'tmpGit')
-* STORAGE_PATH is a directory to upload files in case of local storage (default to 'upload)
-* STORAGE is a storage to store binary crate files from `cargo publish` command.
-    * local (default)
-    * s3 (Not Implemented)
-    * artifactory (Not Implemented)
-* BUCKET_NAME is a S3 bucket name to upload binary crate files in case of S3 storage
-* ARTIFACTORY_REPO is a artifactory repository to upload binary crate files in case of artifactory storage
-* GIT_REPO_USERNAME, GIT_REPO_EMAIL and GIT_REPO_PASSWORD is a credentials used to push info to git index repository (HINT: you can use your personal access tokens from GitHub or GitLab as password)
-* GIN_MODE you can it release to run in production look more at https://github.com/gin-gonic/gin/blob/master/mode.go
-* PORT is a port, GIN server application listen on (default 8000)
+## Limitations
 
-Mongo DB used here to store crate packages version and check if it already uploaded.
+* Yank feature not implemented yet (https://doc.rust-lang.org/cargo/reference/registries.html#yank)
 
-* MONGODB_URI mongo connection string (default to mongodb://127.0.0.1:27017)
-* MONGO_CONNECTION_TIMEOUT connection timeout (default 5 seconds)
+## Configure with environment variables
 
+A shortlist, description bellow
+
+* [GIN_MODE](#gin_mode)
+* [PORT](#port)
+* [GIT_REPO_URL](#git_repo_url)
+* [GIT_REPO_PATH](#git_repo_path)
+* [GIT_REPO_USERNAME](#git_repo_username)
+* [GIT_REPO_PASSWORD](#git_repo_path)
+* [GIT_REPO_EMAIL](#git_repo_email)
+* [MONGODB_URI](#mongodb_uri)
+* [MONGO_CONNECTION_TIMEOUT](#mongo_connection_timeout)
+* [STORAGE_TYPE](#storage_type)
+* [LOCAL_STORAGE_PATH](#local_storage_path)
+* [ARTIFACTORY_URL](#artifactory_url)
+* [ARTIFACTORY_LOGIN](#artifactory_login)
+* [ARTIFACTORY_PASSWORD](#artifactory_password)
+* [ARTIFACTORY_REPO_NAME](#artifactory_repo_name)
+* [AWS_ACCESS_KEY_ID](#aws_access_key_id)
+* [AWS_SECRET_ACCESS_KEY](#aws_secret_access_key)
+* [AWS_DEFAULT_REGION](#aws_default_region)
+* [AWS_S3_BUCKET_NAME](#aws_s3_bucket_name)
+
+### Generic
+##### `STORAGE_TYPE`
+* **Description**
+    > Storage type is used to choose backend storage to upload/download binary crates files <br> 
+    It can be one of choice: <br>
+    .. local - local filesystem folder <br>
+    .. s3 - AWS S3 bucket, or S3 API compatible system (Minio, Ceph) <br>
+    .. artifactory - JFrog Artifactory system
+* **Example** 
+    > `STORAGE_TYPE=s3`
+* **Default**
+    > `STORAGE_TYPE=local`
+### GIN
+
+##### `GIN_MODE`
+* **Description**
+    > Gin Application working mode <br> 
+    https://github.com/gin-gonic/gin/blob/master/mode.go#L52 <br>
+    There is some log verbosity applied based on the mode. <br>
+    Debug is more verbose.
+* **Example** 
+    > `GIN_MODE=release`
+* **Default**
+    > `GIN_MODE=debug`
+
+##### `PORT`
+* **Description**
+    > HTTP port to application listen on<br> 
+* **Example** 
+    > `PORT=8000`
+* **Default**
+    > `PORT=8000`
+                >
+### Git
+##### `GIT_REPO_URL`
+* **Description**
+    > Git repository to store index files. <br>
+    Cargo use it to search particular package and version. <br>
+    [Cargo configuration example](#cargo-configuration-example)
+* **Example** 
+    > `GIT_REPO_URL=https://github.com/boskiv/open-registry-index`
+* **Default**
+    > Empty
+
+##### `GIT_REPO_PATH`
+* **Description**
+    > Temporary directory to clone repo. <br>
+    Application use it to commit and push cargo package information. <br>
+* **Example** 
+    > `GIT_REPO_PATH=/data/gitRepo`
+* **Default**
+    > `GIT_REPO_PATH=tmpGit`
+
+##### `GIT_REPO_USERNAME`
+* **Description**
+    > Login to work with git repo. <br>
+* **Example** 
+    > `GIT_REPO_USERNAME=boskiv`
+* **Default**
+    > Empty
+
+##### `GIT_REPO_PASSWORD`
+* **Description**
+    > Password to work with git repo. <br>
+* **Example** 
+    > `GIT_REPO_PASSWORD=123123123`
+* **Default**
+    > Empty
+
+##### `GIT_REPO_EMAIL`
+* **Description**
+    > Email used in commit signature. <br>
+* **Example** 
+    > `GIT_REPO_EMAIL=crates@company.org`
+* **Default**
+    > Empty
+### Mongo
+Mongo database used to store package name and version info.
+
+Multiple field index used to control version uniqueness.
+
+https://docs.mongodb.com/manual/core/index-unique
+
+```
+Keys: bson.M{
+  "name": 1,
+  "version": 1,
+},
+Options: options.Index().SetUnique(true)
+```
+
+##### `MONGODB_URI`
+* **Description**
+    > URI formats for defining connections between applications and MongoDB instances in the official MongoDB drivers. <br>
+    https://docs.mongodb.com/manual/reference/connection-string
+* **Example** 
+    > `MONGODB_URI=mongodb://mongo:27017`
+* **Default**
+    > `MONGODB_URI=mongodb://127.0.0.1:27017`
+
+##### `MONGO_CONNECTION_TIMEOUT`
+* **Description**
+    > Timeout to check mongo availability <br>
+    Application wil exit with code 1, if timeout fires.
+* **Example** 
+    > `MONGO_CONNECTION_TIMEOUT=mongodb://mongo:27017`
+* **Default**
+    > `MONGO_CONNECTION_TIMEOUT=mongodb://127.0.0.1:27017`
+### Local storage
+
+Be sure that use set `STORAGE_TYPE=local` to use or remove that env, so this will apply by default.
+
+##### `LOCAL_STORAGE_PATH`
+* **Description**
+    > Filesystem path to store uploaded crates and get it for download. <br>
+    If the path does not exist, the application will try to create it. <br>
+    You can use docker mounted volumes, shared volumes and network filesystem volumes, to sure about data persistence. <br>
+    However, it's not production recommended storage because of maintenance, backup, and support issues. <br> 
+    So use it for **testing only** <br>
+* **Example** 
+    > `LOCAL_STORAGE_PATH=/data/crates`
+* **Default**
+    > `LOCAL_STORAGE_PATH=upload`
+### Artifactory storage
+
+Be sure that use set `STORAGE_TYPE=artifactory` to use it.
+
+##### `ARTIFACTORY_URL`
+* **Description**
+    > Path to artifactory API. <br> 
+    Should include schema (http/https) and full path to API. <br> 
+    You can find this in the description at [Set Me Up](https://www.jfrog.com/confluence/display/RTF/Using+Artifactory#UsingArtifactory-SetMeUp) dialog
+* **Example**
+    > `ARTIFACTORY_URL=http://localhost:8081/artifactory`
+* **Default**
+    > Empty
+
+##### `ARTIFACTORY_LOGIN`
+* **Description**
+    > Login to artifactory with write access for binary repository. <br> 
+* **Example**
+    > `ARTIFACTORY_LOGIN=bot`
+* **Default**
+    > Empty
+    
+##### `ARTIFACTORY_PASSWORD`
+* **Description**
+    > Password to access artifactory with login provided in `ARTIFACTORY_LOGIN`. <br> 
+* **Example**
+    > `ARTIFACTORY_PASSWORD=password`
+* **Default**
+    > Empty
+
+##### `ARTIFACTORY_REPO_NAME`
+* **Description**
+    > Generic binary repository name created in artifactory. <br>
+    https://www.jfrog.com/confluence/display/RTF/Configuring+Repositories
+* **Example**
+    > `ARTIFACTORY_REPO_NAME=crates`
+* **Default**
+    > Empty
+### S3 storage
+
+Most of variables are common used.
+
+https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
+
+##### `AWS_ACCESS_KEY_ID`
+* **Description**
+    > Specifies an AWS access key associated with an IAM user or role. <br> 
+* **Example**
+    > `AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE`
+* **Default**
+    > Empty
+
+##### `AWS_SECRET_ACCESS_KEY`
+* **Description**
+    > Specifies the secret key associated with the access key. This is essentially the "password" for the access key. 
+* **Example**
+    > `AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY`
+* **Default**
+    > Empty
+
+##### `AWS_DEFAULT_REGION`
+* **Description**
+    > Specifies the [AWS Region](https://docs.aws.amazon.com/en_us/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration-region) to send the request to. 
+* **Example**
+    > `AWS_DEFAULT_REGION=us-west-2`
+* **Default**
+    > Empty
+
+##### `AWS_S3_BUCKET_NAME`
+* **Description**
+    > Bucket name to store crate files. 
+* **Example**
+    > `AWS_S3_BUCKET_NAME=crates`
+* **Default**
+    > Empty
 
 ## Run
 
 * `docker-compose up -d`
 * `./go-open-registry` 
 
+
+# Cargo configuration example
 ## Publishing package
 
 * setup registry `.cargo/config` file with 
