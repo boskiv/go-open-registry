@@ -101,10 +101,10 @@ func storagePut(appConfig *config.AppConfig, crateJSON parser.CrateJSON, crateFi
 
 func registryAdd(appConfig *config.AppConfig, crateJSON parser.CrateJSON, jsonFile []byte) (err error) {
 	err = gitregistry.RegistryAdd(appConfig, crateJSON.Name, crateJSON.Vers, jsonFile)
-	log.ErrorWithFields("Error while add file to registry", log.Fields{
-		"err": err,
-	})
 	if err != nil {
+		log.ErrorWithFields("Error while add file to registry", log.Fields{
+			"err": err,
+		})
 		err = rollBackDBVersion(appConfig, crateJSON)
 		return err
 	}

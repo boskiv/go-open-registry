@@ -31,6 +31,8 @@ type AppConfig struct {
 	Storage struct {
 		Type     storage.Type           `json:"type"`
 		Path     string                 `json:"path"`
+		Login    string                 `json:"username"`
+		Password string                 `json:"-"`
 		Instance storage.GenericStorage `json:"instance"`
 	}
 	DB struct {
@@ -73,6 +75,12 @@ func New() *AppConfig {
 	viper.SetDefault("storage_path", "upload")
 	appConfig.Storage.Path = viper.GetString("storage_path")
 
+	viper.SetDefault("storage_login", "")
+	appConfig.Storage.Login = viper.GetString("storage_login")
+
+	viper.SetDefault("storage_password", "")
+	appConfig.Storage.Password = viper.GetString("storage_password")
+
 	viper.SetDefault("storage_type", "local")
 
 	switch viper.GetString("storage_type") {
@@ -84,7 +92,9 @@ func New() *AppConfig {
 		log.Info("Using S3 storage")
 	case "artifactory":
 		appConfig.Storage.Type = storage.Artifactory
+		appConfig.Storage.Path = viper.GetString("artifactory_url") + "/" + viper.GetString("storage_path")
 		log.Info("Using artifactory storage")
+
 	default:
 		log.FatalWithFields("Storage config can be set one of: 'local', 's3', 'artifactory'",
 			log.Fields{"storage": viper.GetString("storage")})

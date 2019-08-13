@@ -6,7 +6,11 @@ import (
 
 // S3Storage  type struct
 type S3Storage struct {
-	Path string
+	Path       string
+	Endpoint   string
+	AccessKey  string
+	SecretKey  string
+	BucketName string
 }
 
 // PutFile implementation

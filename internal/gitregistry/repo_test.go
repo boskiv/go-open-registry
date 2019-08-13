@@ -63,8 +63,10 @@ func Test_makePath(t *testing.T) {
 		Storage: struct {
 			Type     storage.Type           `json:"type"`
 			Path     string                 `json:"path"`
+			Login    string                 `json:"username"`
+			Password string                 `json:"-"`
 			Instance storage.GenericStorage `json:"instance"`
-		}{storage.Local, "upload", nil},
+		}{storage.Local, "upload", "", "", nil},
 		DB: struct {
 			URI     string        `json:"uri"`
 			Timeout time.Duration `json:"timeout"`
