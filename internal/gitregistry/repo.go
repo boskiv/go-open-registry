@@ -1,6 +1,7 @@
 package gitregistry
 
 import (
+	"encoding/json"
 	"fmt"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/helpers"
@@ -8,11 +9,17 @@ import (
 	"gopkg.in/src-d/go-git.v4"
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	"gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
 	"time"
 )
+
+type cargoConfig struct {
+	DownloadURL string `json:"dl"`
+	APIUrl      string `json:"api"`
+}
 
 // New instance of git repository
 func New(appConfig *config.AppConfig) *git.Repository {
@@ -29,7 +36,7 @@ func New(appConfig *config.AppConfig) *git.Repository {
 		log.Info("Repo folder does not exist, make clone")
 		repo, err = git.PlainClone(appConfig.Repo.Path, false, &git.CloneOptions{
 			URL:  appConfig.Repo.URL,
-			Auth: &http.BasicAuth{Username: appConfig.Repo.Bot.Name, Password: appConfig.Repo.Bot.Password},
+			Auth: &http.BasicAuth{Username: appConfig.Repo.Auth.Name, Password: appConfig.Repo.Auth.Password},
 		})
 		if err != nil {
 			log.ErrorWithFields("Error while clone repo", log.Fields{
@@ -107,14 +114,107 @@ func RegistryAdd(
 	return nil
 }
 
+// InitConfig recommit config file every time on start
+func InitConfig(appConfig *config.AppConfig) (err error) {
+	configFileName := "config.json"
+	pathToConfig := path.Join(appConfig.Repo.Path, configFileName)
+	fileContent, err := os.OpenFile(pathToConfig, os.O_CREATE|os.O_RDWR, os.ModePerm)
+	if err != nil {
+		// file not found
+		log.Error(err)
+	}
+	// read json
+	var jsonConfig cargoConfig
+
+	var bytes []byte
+	bytes, err = ioutil.ReadFile(fileContent.Name())
+	if err != nil {
+		log.Error(err)
+	}
+	defer fileContent.Close()
+
+	err = json.Unmarshal(bytes, &jsonConfig)
+	if err != nil {
+		log.ErrorWithFields("Bad json file,rewriting", log.Fields{"err": err})
+		err = os.Truncate(fileContent.Name(), 0)
+		if err != nil {
+			log.Fatal(err)
+		}
+		jsonConfig = cargoConfig{
+			DownloadURL: "",
+			APIUrl:      "",
+		}
+
+	} else {
+		if jsonConfig.APIUrl == appConfig.App.CargoAPIURL &&
+			jsonConfig.DownloadURL == appConfig.App.CargoDownloadURL {
+			return err
+		}
+	}
+
+	jsonConfig.APIUrl = appConfig.App.CargoAPIURL
+	jsonConfig.DownloadURL = appConfig.App.CargoDownloadURL
+
+	bytes, err = json.Marshal(jsonConfig)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	_, err = fileContent.Write(bytes)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	defer fileContent.Close()
+
+	w, err := appConfig.Repo.Instance.Worktree()
+	if err != nil {
+		return err
+	}
+	_, err = w.Add(configFileName)
+	if err != nil {
+		log.ErrorWithFields("Error adding to local repo", log.Fields{"error": err})
+		return err
+	}
+
+	log.InfoWithFields("File added to local repo", log.Fields{"file": configFileName})
+
+	commitMsg := fmt.Sprintf("Commit config %s", configFileName)
+	log.InfoWithFields("Commit config to repo", log.Fields{
+		"message": commitMsg,
+	})
+	commit, err := w.Commit(commitMsg, &git.CommitOptions{
+		Author: &object.Signature{
+			Name:  appConfig.Repo.Auth.Name,
+			Email: appConfig.Repo.Auth.Email,
+			When:  time.Now(),
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = appConfig.Repo.Instance.CommitObject(commit)
+	if err != nil {
+		return err
+	}
+	_, err = pushRegistryRepo(appConfig)
+	if err != nil {
+		return err
+
+	}
+	return err
+}
+
 // takes config
 // push repo changes to origin
 // return updated last commit hash or error
 func pushRegistryRepo(appConfig *config.AppConfig) (result string, err error) {
 	err = appConfig.Repo.Instance.Push(&git.PushOptions{
 		Auth: &http.BasicAuth{
-			Username: appConfig.Repo.Bot.Name,
-			Password: appConfig.Repo.Bot.Password,
+			Username: appConfig.Repo.Auth.Name,
+			Password: appConfig.Repo.Auth.Password,
 		},
 	})
 	if err != nil {
@@ -158,8 +258,8 @@ func commitFile(appConfig *config.AppConfig, packageName, packageVersion string)
 	})
 	commit, err := w.Commit(commitMsg, &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  appConfig.Repo.Bot.Name,
-			Email: appConfig.Repo.Bot.Email,
+			Name:  appConfig.Repo.Auth.Name,
+			Email: appConfig.Repo.Auth.Email,
 			When:  time.Now(),
 		},
 	})
