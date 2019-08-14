@@ -2,6 +2,8 @@ package storage
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/minio/minio-go/v6"
 	"go-open-registry/internal/log"
 )
@@ -28,20 +30,32 @@ func (s *S3Storage) PutFile(packageName, packageVersion string, content []byte) 
 		return err
 	}
 
+	h := sha256.New()
+	_, err = h.Write(content)
+	if err != nil {
+		log.ErrorWithFields("Error while write hash from file", log.Fields{"error": err})
+		return err
+	}
+
+	cksum := hex.EncodeToString(h.Sum(nil))
+	log.InfoWithFields("Cksum from s3 put", log.Fields{"cksum": cksum})
+
 	reader := bytes.NewReader(content)
+
 	objectName := packageName + "-" + packageVersion + ".crate"
 	// Upload the zip file with FPutObject
-	_, err = minioClient.PutObject(s.BucketName, objectName, reader, -1, minio.PutObjectOptions{})
+	response, err := minioClient.PutObject(s.BucketName, objectName, reader, reader.Size(), minio.PutObjectOptions{})
 	if err != nil {
 		log.ErrorWithFields("Error put object", log.Fields{"err": err})
 		return err
 	}
+	log.InfoWithFields("Response", log.Fields{"response": response})
 
 	return err
 }
 
 // GetFile implementation
-func (s *S3Storage) GetFile(packageName, packageVersion string) (bytes []byte, err error) {
+func (s *S3Storage) GetFile(packageName, packageVersion string) (content []byte, err error) {
 	log.Info("Get a file from S3 storage")
 
 	minioClient, err := minio.New(s.Endpoint, s.AccessKeyID, s.SecretAccessKey, s.UseSSL)
@@ -56,11 +70,30 @@ func (s *S3Storage) GetFile(packageName, packageVersion string) (bytes []byte, e
 		return nil, err
 	}
 
-	_, err = object.Read(bytes)
+	stat, err := object.Stat()
 	if err != nil {
 		log.Error(err)
 		return nil, err
 	}
+	log.InfoWithFields("S3 Stats:", log.Fields{"stat": stat})
 
-	return bytes, err
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(object)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	content = buf.Bytes()
+
+	h := sha256.New()
+	_, err = h.Write(content)
+	if err != nil {
+		log.ErrorWithFields("Error while write hash from file", log.Fields{"error": err})
+		return nil, err
+	}
+
+	cksum := hex.EncodeToString(h.Sum(nil))
+	log.InfoWithFields("Cksum from s3 get", log.Fields{"cksum": cksum})
+
+	return content, err
 }

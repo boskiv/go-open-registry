@@ -30,7 +30,7 @@ func GetCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 		h := sha256.New()
 		_, err = h.Write(crateFile)
 		if err != nil {
-			log.ErrorWithFields("Error while writing file", log.Fields{"error": err})
+			log.ErrorWithFields("Error while write hash from file", log.Fields{"error": err})
 			c.JSON(400, gin.H{
 				"error": err,
 			})
