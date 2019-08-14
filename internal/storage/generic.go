@@ -1,29 +1,27 @@
 package storage
 
-import "go-open-registry/internal/log"
-
 // GenericStorage interface, for method implementation
 type GenericStorage interface {
 	PutFile(packageName, packageVersion string, content []byte) error
 	GetFile(packageName, packageVersion string) ([]byte, error)
 }
 
-// New storage by Type
-func New(p Type, path string, login, password string) GenericStorage {
-	switch p {
-	case Local:
-		return &LocalStorage{Path: path}
-	case S3:
-		return &S3Storage{Path: path, AccessKey: login, SecretKey: password}
-	case Artifactory:
-		log.InfoWithFields("Path", log.Fields{"path": path})
-		return &ArtifactoryStorage{Path: path, Login: login, Password: password}
-
-	default:
-		return nil
-	}
-
-}
+//// New storage by Type
+//func New(p Type, path string, login, password string) GenericStorage {
+//	switch p {
+//	case Local:
+//		return &LocalStorage{Path: path}
+//	case S3:
+//		return &S3Storage{Path: path, AccessKey: login, SecretKey: password}
+//	case Artifactory:
+//		log.InfoWithFields("Path", log.Fields{"path": path})
+//		return &ArtifactoryStorage{Path: path, Login: login, Password: password}
+//
+//	default:
+//		return nil
+//	}
+//
+//}
 
 // Type storage Enum
 type Type int

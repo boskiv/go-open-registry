@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/minio/minio-go/v6"
 	"go-open-registry/internal/config"
 	"go-open-registry/internal/gitregistry"
 	"go-open-registry/internal/handlers"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus" //nolint:depguard
 	ginlogrus "github.com/toorop/gin-logrus"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -59,17 +61,38 @@ func initDB(appConfig *config.AppConfig) (err error) {
 }
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	appConfig := config.New()
 	appRepo := gitregistry.New(appConfig)
 	appConfig.Repo.Instance = appRepo
-	appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path, appConfig.Storage.Login, appConfig.Storage.Password)
-	appConfig.Storage.Instance = appStorage
+	//appStorage := storage.New(appConfig.Storage.Type, appConfig.Storage.Path, appConfig.Storage.Login, appConfig.Storage.Password)
+	//appConfig.Storage.Instance = appStorage
 
-	err := initDB(appConfig)
+	err = initDB(appConfig)
 	if err != nil {
-		log.ErrorWithFields("Error from InitDB", log.Fields{
+		log.ErrorWithFields("Error from initDB", log.Fields{
 			"err": err,
 		})
+	}
+
+	err = initGit(appConfig)
+	if err != nil {
+		log.ErrorWithFields("Error from initGit", log.Fields{
+			"err": err,
+		})
+	}
+
+	if appConfig.Storage.Type == storage.S3 {
+		err = initS3Storage(appConfig)
+		if err != nil {
+			log.ErrorWithFields("Error from initS3Storage", log.Fields{
+				"err": err,
+			})
+		}
 	}
 
 	if gin.Mode() != gin.ReleaseMode {
@@ -121,4 +144,40 @@ func main() {
 	}
 
 	logrus.Info("Server exiting")
+}
+
+func initGit(appConfig *config.AppConfig) (err error) {
+	err = gitregistry.InitConfig(appConfig)
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func initS3Storage(appConfig *config.AppConfig) (err error) {
+	log.Info("Init Client")
+	// Initialize minio client object.
+	minioClient, err := minio.New(appConfig.S3Storage.Endpoint, appConfig.S3Storage.AccessKeyID, appConfig.S3Storage.SecretAccessKey, appConfig.S3Storage.UseSSL)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	err = minioClient.MakeBucket(appConfig.S3Storage.BucketName, appConfig.S3Storage.DefaultRegion)
+	if err != nil {
+		// Check to see if we already own this bucket (which happens if you run this twice)
+		exists, errBucketExists := minioClient.BucketExists(appConfig.S3Storage.BucketName)
+		if errBucketExists == nil && exists {
+			log.InfoWithFields("We already own", log.Fields{
+				"bucket": appConfig.S3Storage.BucketName,
+			})
+		} else {
+			log.Fatal(err)
+		}
+	} else {
+		log.InfoWithFields("Successfully created", log.Fields{
+			"bucket": appConfig.S3Storage.BucketName,
+		})
+	}
+	return err
 }

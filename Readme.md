@@ -20,6 +20,7 @@ A shortlist, description bellow
 
 * [GIN_MODE](#gin_mode)
 * [PORT](#port)
+* [CARGO_API_URL](#cargo_api_url)
 * [GIT_REPO_URL](#git_repo_url)
 * [GIT_REPO_PATH](#git_repo_path)
 * [GIT_REPO_USERNAME](#git_repo_username)
@@ -37,6 +38,7 @@ A shortlist, description bellow
 * [AWS_SECRET_ACCESS_KEY](#aws_secret_access_key)
 * [AWS_DEFAULT_REGION](#aws_default_region)
 * [AWS_S3_BUCKET_NAME](#aws_s3_bucket_name)
+* [AWS_S3_ENDPOINT](#aws_s3_endpoint)
 
 ### Generic
 ##### `STORAGE_TYPE`
@@ -70,7 +72,23 @@ A shortlist, description bellow
     > `PORT=8000`
 * **Default**
     > `PORT=8000`
-                >
+
+### Cargo config
+Cargo config file stored in a git registry generated automatically from environment variables on start
+If you change variables, the file will be updated and pushed to the repository
+
+https://doc.rust-lang.org/cargo/reference/registries.html#index-format
+
+`dl` url made from `api` with concatenation `/api/v1/crates` in [internal/config/config.go:60](https://github.com/boskiv/go-open-registry/blob/master/internal/config/config.go#L60)
+
+##### `CARGO_API_URL`
+* **Description**
+    > This is the base URL for the web API 
+* **Example** 
+    > `CARGO_API_URL=http://my-registry-api:3000`
+* **Default**
+    > `CARGO_API_URL=http://localhost:8000`
+
 ### Git
 ##### `GIT_REPO_URL`
 * **Description**
@@ -231,12 +249,29 @@ https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html
 
 ##### `AWS_S3_BUCKET_NAME`
 * **Description**
-    > Bucket name to store crate files. 
+    > Bucket name to store crate files. It will be created automatically if not exist.
 * **Example**
     > `AWS_S3_BUCKET_NAME=crates`
 * **Default**
     > Empty
 
+##### `AWS_S3_USE_SSL`
+* **Description**
+    > Should application use SSL protocol when connect to S3 API  
+* **Example**
+    > `AWS_S3_USE_SSL=false`
+* **Default**
+    > AWS_S3_USE_SSL=true
+
+##### `AWS_S3_ENDPOINT`
+* **Description**
+    > S3 API Endpoint to upload file. <br>
+    Application use minio sdk to work with S3 like APIs
+    you should put here url without schema f.e. play.minio.io, but you should to put schema in AWS_S3_USE_SSL as boolean param  
+* **Example**
+    > `AWS_S3_ENDPOINT=localhost:9000`
+* **Default**
+    > AWS_S3_ENDPOINT=s3
 ## Run
 ### Prerequisite
 
@@ -272,7 +307,7 @@ Run this configuration just to have third-party services
 ### Test with local storage
 
 * `docker-compose up -d -f compose/local.yaml`
-* `open http://localhost:3000` for Gitea and create an account and repository.
+* `open http://localhost:3000` for Gogs and create an account and repository.
 * put config.json file to the repository
 * `use http://localhost:8000` to Configure cargo
 
@@ -281,7 +316,7 @@ Run this configuration just to have third-party services
 * `docker-compose up -d -f compose/artifactory.yaml`
 * `open http://localhost:8081` for Artifactory, create a login `bot` and password `password`.
 * create a repository named crates, and give user bot a write access to this repo.
-* `open http://localhost:3000` for Gitea and create an account and repository.
+* `open http://localhost:3000` for Gogs and create an account and repository.
 * put config.json file to the repository
 * `use http://localhost:8000` to Configure cargo
 
@@ -289,8 +324,8 @@ Run this configuration just to have third-party services
 
 * `docker-compose up -d -f compose/minio.yaml`
 * `open http://localhost:9000` for Minio and login with `minio` as user and `minio123` as password.
-* create a bucket named `crates`
-* `open http://localhost:3000` for Gitea and create an account and repository.
+* bucket `crates` will be created automatically
+* `open http://localhost:3000` for Gogs and create an account and repository.
 * put config.json file to the repository
 * `use http://localhost:8000` to Configure cargo
 

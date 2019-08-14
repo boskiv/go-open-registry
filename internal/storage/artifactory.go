@@ -10,9 +10,11 @@ import (
 
 // ArtifactoryStorage struct
 type ArtifactoryStorage struct {
-	Path     string
-	Login    string
-	Password string
+	Path     string `json:"path"`
+	Login    string `json:"login"`
+	Password string `json:"-"`
+	URL      string `json:"url"`
+	RepoName string `json:"repo_name"`
 }
 
 // PutFile implementation

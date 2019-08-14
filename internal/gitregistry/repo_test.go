@@ -46,32 +46,53 @@ func Test_makePath(t *testing.T) {
 		packageName string
 	}
 
-	_appConfig := &config.AppConfig{
+	_appConfig := config.AppConfig{
 		App: struct {
-			Port int `json:"port"`
-		}{8000},
+			Port             int    `json:"port"`
+			CargoAPIURL      string `json:"cargo_api_url"`
+			CargoDownloadURL string `json:"cargo_download_url"`
+		}{8000, "", ""},
 		Repo: struct {
 			URL      string          `json:"url"`
 			Path     string          `json:"path"`
 			Instance *git.Repository `json:"instance"`
-			Bot      config.RepoBot
-		}{"", "tmpGit", nil, config.RepoBot{
-			Name:     "",
-			Email:    "",
-			Password: "",
-		}},
+			Auth     config.Auth
+		}{"", "tmpGit", &git.Repository{}, config.Auth{}},
 		Storage: struct {
-			Type     storage.Type           `json:"type"`
-			Path     string                 `json:"path"`
-			Login    string                 `json:"username"`
-			Password string                 `json:"-"`
-			Instance storage.GenericStorage `json:"instance"`
-		}{storage.Local, "upload", "", "", nil},
+			Type     storage.Type `json:"type"`
+			Instance storage.GenericStorage
+		}{
+			Type:     0,
+			Instance: nil,
+		},
+		LocalStorage: storage.LocalStorage{
+			Path: "",
+		},
+		ArtifactoryStorage: storage.ArtifactoryStorage{
+			Path:     "",
+			Login:    "",
+			Password: "",
+			URL:      "",
+			RepoName: "",
+		},
+		S3Storage: storage.S3Storage{
+			Path:            "",
+			Endpoint:        "",
+			DefaultRegion:   "",
+			AccessKeyID:     "",
+			SecretAccessKey: "",
+			BucketName:      "",
+			UseSSL:          false,
+		},
 		DB: struct {
 			URI     string        `json:"uri"`
 			Timeout time.Duration `json:"timeout"`
 			Client  *mongo.Client `json:"client"`
-		}{"mongodb://localhost:27017", 5, nil},
+		}{
+			URI:     "",
+			Timeout: 0,
+			Client:  &mongo.Client{},
+		},
 	}
 
 	tests := []struct {
@@ -81,7 +102,7 @@ func Test_makePath(t *testing.T) {
 		wantErr    bool
 	}{
 		{"First", args{
-			appConfig:   _appConfig,
+			appConfig:   &_appConfig,
 			packageName: "nohup",
 		}, "tmpGit/no/hu/nohup", false},
 	}
