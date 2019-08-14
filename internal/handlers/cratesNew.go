@@ -57,6 +57,15 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				return
 			}
 
+			err = storagePut(appConfig, crateJSON, crateFile)
+			if err != nil {
+				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
+				c.JSON(400, gin.H{
+					"error": err,
+				})
+				return
+			}
+
 			err = registryAdd(appConfig, crateJSON, jsonFileWithCksum)
 			if err != nil {
 				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
@@ -66,14 +75,6 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				return
 			}
 
-			err = storagePut(appConfig, crateJSON, crateFile)
-			if err != nil {
-				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
-				c.JSON(400, gin.H{
-					"error": err,
-				})
-				return
-			}
 		}
 
 		resp := map[string][]string{
