@@ -63,7 +63,7 @@ func initDB(appConfig *config.AppConfig) (err error) {
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Info("No .env file found. Searching config data in environment variables")
 	}
 
 	appConfig := config.New()

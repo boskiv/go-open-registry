@@ -13,7 +13,7 @@ services:
     ports:
       - 9000:9000
   registry:
-    image: boskiv/cargo-registry:0.2.2
+    image: boskiv/cargo-registry:0.2.3
     environment:
       MONGODB_URI: mongodb://mongo:27017
       GIT_REPO_URL: http://gogs:3000/crates/crates-index
