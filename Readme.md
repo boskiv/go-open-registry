@@ -161,9 +161,9 @@ Options: options.Index().SetUnique(true)
     > Timeout to check mongo availability <br>
     Application wil exit with code 1, if timeout fires.
 * **Example** 
-    > `MONGO_CONNECTION_TIMEOUT=mongodb://mongo:27017`
+    > `MONGO_CONNECTION_TIMEOUT=15`
 * **Default**
-    > `MONGO_CONNECTION_TIMEOUT=mongodb://127.0.0.1:27017`
+    > `MONGO_CONNECTION_TIMEOUT=5`
 ### Local storage
 
 Be sure that use set `STORAGE_TYPE=local` to use or remove that env, so this will apply by default.
