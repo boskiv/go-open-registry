@@ -11,11 +11,16 @@ services:
   registry:
     image: boskiv/cargo-registry:0.2.3
     environment:
+      STORAGE_TYPE: artifactory
       MONGODB_URI: mongodb://mongo:27017
-      GIT_REPO_URL: http://gogs:3000/crates/crates-index
-      GIT_REPO_USER: crates
-      GIT_REPO_EMAIL: crates@cargo.local
-      GIT_REPO_PASSWORD: crates
+      GIT_REPO_URL: https://gitlab.rnd.wargaming.net/git-cargo/index.git
+      GIT_REPO_USERNAME: git-cargo
+      GIT_REPO_EMAIL: git-cargo@wargaming.net
+      GIT_REPO_PASSWORD: User1234
+      ARTIFACTORY_URL: https://artifactory.rnd.wargaming.net/artifactory
+      ARTIFACTORY_REPO_NAME: crates
+      ARTIFACTORY_PASSWORD: User1234
+      ARTIFACTORY_LOGIN: git-cargo
     ports:
       - 8000:8000
     depends_on:

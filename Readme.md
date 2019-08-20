@@ -307,8 +307,9 @@ Run this configuration just to have third-party services
 ### Test with local storage
 
 * `docker-compose up -d -f compose/local.yaml`
-* `open http://localhost:3000` for Gogs and create an account and repository.
-* put config.json file to the repository
+* `open http://localhost:3000` for Gogs and create an account `crates` and repository `crates-index`. Dont forget to check button Initialize repo with readme file. Empty repo will raise an error when registry starts.
+* run `docker-compose up -d -f compose/artifactory.yaml` second time to initialize registry
+* config.json file will be generated automatically.
 * `use http://localhost:8000` to Configure cargo
 
 ### Test with artifactory
@@ -316,8 +317,9 @@ Run this configuration just to have third-party services
 * `docker-compose up -d -f compose/artifactory.yaml`
 * `open http://localhost:8081` for Artifactory, create a login `bot` and password `password`.
 * create a repository named crates, and give user bot a write access to this repo.
-* `open http://localhost:3000` for Gogs and create an account and repository.
-* put config.json file to the repository
+* `open http://localhost:3000` for Gogs and create an account `crates` and repository `crates-index`. Dont forget to check button Initialize repo with readme file. Empty repo will raise an error when registry starts.
+* run `docker-compose up -d -f compose/artifactory.yaml` second time to initialize registry
+* config.json file will be generated automatically.
 * `use http://localhost:8000` to Configure cargo
 
 ### Test with s3 storage
@@ -325,8 +327,9 @@ Run this configuration just to have third-party services
 * `docker-compose up -d -f compose/minio.yaml`
 * `open http://localhost:9000` for Minio and login with `minio` as user and `minio123` as password.
 * bucket `crates` will be created automatically
-* `open http://localhost:3000` for Gogs and create an account and repository.
-* put config.json file to the repository
+* `open http://localhost:3000` for Gogs and create an account `crates` and repository `crates-index`. Dont forget to check button Initialize repo with readme file. Empty repo will raise an error when registry starts.
+* run `docker-compose up -d -f compose/artifactory.yaml` second time to initialize registry
+* config.json file will be generated automatically.
 * `use http://localhost:8000` to Configure cargo
 
 
@@ -343,13 +346,11 @@ token = ""
 * setup `Cargo.toml` file of your package with publish settings
 ```toml
 [package]
-...
 publish = ["open-registry"]
-
 ```
 
 * publish your package
-```toml
+```bash
 cargo publish --registry open-registry
 ```
 
@@ -363,13 +364,12 @@ token = ""
 
 * Setup dependency in `Cargo.toml` file
 ```toml
-...
 [dependencies]
 bo-helper = { version = "0.1", registry = "open-registry" }
 ```
 
 * Run build
-```toml
+```bash
 cargo update
 cargo build
 ```

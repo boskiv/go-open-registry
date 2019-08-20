@@ -39,7 +39,7 @@ func New(appConfig *config.AppConfig) *git.Repository {
 			Auth: &http.BasicAuth{Username: appConfig.Repo.Auth.Name, Password: appConfig.Repo.Auth.Password},
 		})
 		if err != nil {
-			log.ErrorWithFields("Error while clone repo", log.Fields{
+			log.FatalWithFields("Error while clone repo", log.Fields{
 				"err": err,
 			})
 		}

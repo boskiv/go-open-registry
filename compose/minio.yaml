@@ -15,6 +15,11 @@ services:
   registry:
     image: boskiv/cargo-registry:0.2.3
     environment:
+      STORAGE_TYPE: s3
+      AWS_ACCESS_KEY_ID: minio
+      AWS_SECRET_ACCESS_KEY: minio123
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_S3_BUCKET_NAME: crates
       MONGODB_URI: mongodb://mongo:27017
       GIT_REPO_URL: http://gogs:3000/crates/crates-index
       GIT_REPO_USER: crates
