@@ -10,7 +10,7 @@ services:
       STORAGE_TYPE: local
       MONGODB_URI: mongodb://mongo:27017
       GIT_REPO_URL: https://gitlab.rnd.wargaming.net/git-cargo/index.git
-      GIT_REPO_USER: git-cargo
+      GIT_REPO_USERNAME: git-cargo
       GIT_REPO_EMAIL: git-cargo@wargaming.net
       GIT_REPO_PASSWORD: User1234
     ports:
