@@ -123,6 +123,7 @@ func InitConfig(appConfig *config.AppConfig) (err error) {
 		// file not found
 		log.Error(err)
 	}
+
 	// read json
 	var jsonConfig cargoConfig
 
@@ -136,10 +137,6 @@ func InitConfig(appConfig *config.AppConfig) (err error) {
 	err = json.Unmarshal(bytes, &jsonConfig)
 	if err != nil {
 		log.ErrorWithFields("Bad json file,rewriting", log.Fields{"err": err})
-		err = os.Truncate(fileContent.Name(), 0)
-		if err != nil {
-			log.Fatal(err)
-		}
 		jsonConfig = cargoConfig{
 			DownloadURL: "",
 			APIUrl:      "",
@@ -150,6 +147,11 @@ func InitConfig(appConfig *config.AppConfig) (err error) {
 			jsonConfig.DownloadURL == appConfig.App.CargoDownloadURL {
 			return err
 		}
+	}
+
+	err = os.Truncate(fileContent.Name(), 0)
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	jsonConfig.APIUrl = appConfig.App.CargoAPIURL

@@ -7,10 +7,10 @@ type CrateDependency struct {
 	Features        []string `json:"features"`
 	Optional        bool     `json:"optional"`
 	DefaultFeatures bool     `json:"default_features"`
-	Target          string   `json:"target"`
+	Target          *string  `json:"target"`
 	Kind            string   `json:"kind"`
-	Registry        string   `json:"registry"`
-	Package         string   `json:"package"`
+	Registry        *string  `json:"registry"`
+	Package         *string  `json:"package"`
 }
 
 // CrateJSON Struct to unmarshal JSON from cargo request
@@ -21,5 +21,5 @@ type CrateJSON struct {
 	Cksum    string            `json:"cksum"`
 	Features interface{}       `json:"features"`
 	Yanked   bool              `json:"yanked"`
-	Links    string            `json:"links"`
+	Links    *string           `json:"links"`
 }
