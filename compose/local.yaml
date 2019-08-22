@@ -5,7 +5,7 @@ services:
     ports:
       - 27017:27017
   registry:
-    image: boskiv/cargo-registry:0.2.3
+    image: boskiv/cargo-registry:0.2.5
     environment:
       STORAGE_TYPE: local
       MONGODB_URI: mongodb://mongo:27017
