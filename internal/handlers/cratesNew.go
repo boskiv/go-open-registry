@@ -27,7 +27,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 					"err": err,
 				})
 			}
-			var crateJSON parser.CrateJSON
+			var crateJSON *parser.CrateJSON
 			err = json.Unmarshal(jsonFile, &crateJSON)
 			if err != nil {
 				log.ErrorWithFields("Error while json.Unmarshal repo", log.Fields{
@@ -35,6 +35,10 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				})
 			}
 			crateJSON.Cksum = cksum
+
+			for i := range crateJSON.Deps {
+				crateJSON.Deps[i].Req = crateJSON.Deps[i].VersionReq
+			}
 			log.InfoWithFields("Content cksum", log.Fields{
 				"cksum": cksum,
 			})
@@ -48,7 +52,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				return
 			}
 
-			err = addDBVersion(appConfig, crateJSON)
+			err = addDBVersion(appConfig, *crateJSON)
 			if err != nil {
 				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
@@ -57,7 +61,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				return
 			}
 
-			err = storagePut(appConfig, crateJSON, crateFile)
+			err = storagePut(appConfig, *crateJSON, crateFile)
 			if err != nil {
 				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{
@@ -66,7 +70,7 @@ func NewCrateHandler(appConfig *config.AppConfig) func(c *gin.Context) {
 				return
 			}
 
-			err = registryAdd(appConfig, crateJSON, jsonFileWithCksum)
+			err = registryAdd(appConfig, *crateJSON, jsonFileWithCksum)
 			if err != nil {
 				log.ErrorWithFields("Error 400 throw", log.Fields{"error": err})
 				c.JSON(400, gin.H{

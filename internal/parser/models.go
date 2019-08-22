@@ -4,6 +4,7 @@ package parser
 type CrateDependency struct {
 	Name            string   `json:"name"`
 	Req             string   `json:"req"`
+	VersionReq      string   `json:"version_req"`
 	Features        []string `json:"features"`
 	Optional        bool     `json:"optional"`
 	DefaultFeatures bool     `json:"default_features"`
